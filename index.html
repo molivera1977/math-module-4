@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Lexend:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=m4a" />
+  <link rel="stylesheet" href="style.css?v=m4c-videos5" />
 </head>
 <body>
 <canvas id="confetti-canvas"></canvas>
@@ -351,6 +351,7 @@
     </div>
     <div id="q-words"></div>
     <div id="q-visual"></div>
+    <div id="video-host"></div><!-- 🎬 a Practice question's "Show me" video (video.js) -->
 
     <div class="options-grid" id="answers" role="radiogroup" aria-label="Answer choices"></div>
 
@@ -362,6 +363,7 @@
     </div>
 
     <div id="feedback" class="feedback-box"></div>
+    <div id="video-host-miss"></div><!-- 🎬 "Watch how" after a miss: under the red box, not inside it (video.js) -->
 
     <div class="controls">
       <button id="confirm-btn" class="action-btn hidden" onclick="app.confirmAnswer()">✅ That's My Answer!</button>
@@ -515,7 +517,7 @@
 <script src="form-label.js?v=m4a"></script>
 <!-- the recorded voice = Ava (Marcos 11/13: "let's use Ava"): every line the site can say, made ahead (site-tests mm4-kokoro.spec.js
      → kokoro-voice/make_ava_kokoro.py); kokoro-voice.js plays them in place of the device voice. Before next-waits.js, which listens to it. -->
-<script src="kokoro/lines.js?v=m4ava1"></script>
+<script src="kokoro/lines.js?v=72187ba4"></script>
 <script src="kokoro-voice.js?v=m4a"></script>
 <script src="next-waits.js?v=m4a" data-hold='#next-btn, #lc-next'></script>
 <script src="data/form_w.js?v=m4a"></script>
@@ -531,6 +533,10 @@
 <script src="visuals.js?v=m4a"></script>
 <script src="school-clock.js?v=m4a"></script>
 <script src="spot-sync.js?v=m4a"></script>
-<script src="script.js?v=m4b-roster24-spot1-school1"></script>
+<!-- 🎬 the lesson videos (Marcos 11/13): which video goes where, and the player that puts one on the page. After
+     kokoro-voice.js (video.js stops a video when the site speaks), before script.js (which uses them). -->
+<script src="data/videos.js?v=d12ae9ce"></script>
+<script src="video.js?v=m4v5"></script>
+<script src="script.js?v=m4c-videos2"></script>
 </body>
 </html>

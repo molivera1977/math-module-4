@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multiply with zeros · Math Module 4</title>
+<link rel="stylesheet" href="../lib/engine.css?v=fa68c4a8">
+<link rel="expect" href="#bar" blocking="render">
+</head>
+<body>
+<script src="../lib/engine.js?v=d6885892"></script>
+<script src="../lib/mm4.js?v=1928c069"></script>
+<script src="../lib/embed.js?v=3bc13d2d"></script>
+<script src="audio/en/timings.js?v=a0ef8a92"></script>
+<script>
+'use strict';
+/* Mr. O's 4th grade · Math Module 4, Lesson 4.1 (4.NBT.5): multiply tens, hundreds and thousands by a 1-digit number
+   with a basic fact. The lesson reminder and the hint video for "Multiply with zeros" questions.
+   Redrawn 11/13 to show HIS lessons and nothing new (Mr. O: "emphasize what I taught … not introduce something new"):
+   · cover / back = his homework 11-9 Part 5: "6 × 800  1 Cover the zeros: 6 × 8|00  2 Do the fact: 6 × 8 = 48
+     3 Put back 2 zeros: 4,800", here with 7 × 800 = 5,600; the sticky note is his grey cover box
+   · why = his homework 11-9 Part 2/3: groups of base-ten pieces in dashed boxes ("2 groups of 3 tens") and
+     "4 × 8 hundreds = 32 hundreds = 3,200 · Keep the word hundreds", here 7 × 8 hundreds = 56 hundreds = 5,600
+   · tens = the same three steps with 4 × 70 = 280
+   · trap = his "Fact ends in 0? Keep that 0." (11-9 Part 5, 11-10 Part 2), with 6 × 5,000 = 30,000, not 3,000
+   Colours: teal = the fact (his green underline under the fact's digits), orange = the zeros that come along,
+   red = the mistake only, blue card = the problem. A number shows when Ava says it; a "?" waits for the answer. */
+const CHAPTER = { number: 1, title: 'Multiply with zeros', minutes: 1, language: 'en' };
+
+/* ── his board, as helpers ── */
+// pieces ks of a line wait until t, the word that says them
+const later = (line, ks, t) => ks.forEach(k => { put(line.row[k], { o: 0 }); show(line.row[k], t, .35); });
+// a line whose answer (pieces k to the end) hides behind a "?" until reveal(line, t)
+const ask = (p, items, k, x, y, t0, { qFill = INK, ...opts } = {}) => {
+  const line = dLine(p, items, x, y, t0, opts), row = line.row;
+  row.slice(k).forEach(e => put(e, { o: 0 }));
+  line._q = M(line, ['?'], { x: row[k]._px - row[k]._w / 2 + textW('?', row.size) / 2, y: row.y, size: row.size, fill: qFill });
+  line._k = k;
+  return line;
+};
+const reveal = (line, t) => { hide(line._q, t, .2); line.row.slice(line._k).forEach(e => show(e, t + .1, .35)); };
+const askRow = (p, items, k, x, y, t0, tAns, opts) => { const line = ask(p, items, k, x, y, t0, opts); reveal(line, tAns); return line; };
+// the problem's blue card turns into an orange answer card
+const answered = (line, t) => tw(line.firstChild, { c_fill: ORANGE_BG }, t, .5);
+// piece k of a line flies in from (x, y) at t0: the fact's digits from the fact, the zeros from where they were covered
+const flyPiece = (line, k, [x, y], t0, dur = .8) => {
+  const e = line.row[k];
+  put(e, { x, y, o: 0 });
+  tw(e, { o: 1 }, t0, .15);
+  tw(e, { x: e._px, y: line.row.y }, t0, dur, io);
+};
+const spot = (line, k) => [line.row[k]._px, line.row.y];
+// the kit's sticky note over pieces i..j, set a little right so it does not hide the end of the fact's last digit
+const coverZeros = (line, i, j, t0) => { const n = dCover(line, i, j, t0); put(n, { x: st(n).x + line.row.size * .06 }); return n; };
+// his green underline under the fact's digits (teal here): under pieces i..j of a line, drawn on at t0
+const uline = (line, i, j, t0, color = TEAL) => {
+  const row = line.row, sz = row.size, a = row[i]._px - row[i]._w / 2 + sz * .04, b = row[j]._px + row[j]._w / 2 - sz * .04, y = row.y + sz * .17;
+  draw(path(line, `M${a} ${y}H${b}`, { stroke: color, 'stroke-width': Math.max(5, sz * .075), fill: 'none' }, { d: 0 }), t0, .4);
+};
+// a ring drawn round piece k of a line
+const ring = (line, k, t0, color = TEAL) => {
+  const e = line.row[k], sz = line.row.size, cx = e._px, cy = line.row.y - sz * .36, rx = e._w / 2 + sz * .07, ry = sz * .5;
+  draw(path(line, `M${cx} ${cy - ry}A${rx} ${ry} 0 1 0 ${cx + .1} ${cy - ry}`, { stroke: color, 'stroke-width': 6, fill: 'none' }, { d: 0 }), t0, .5);
+};
+// his numbered steps (homework 11-9 Part 5): a teal number, then the step's name in ink; the maths sits in one column after
+const LX = 236;
+const stepName = (p, n, str, y, t0, size = 44) => {
+  const g = G(p, { o: 0 }), cy = y - size * .34;
+  mk('circle', { cx: LX - 50, cy, r: 28, fill: TEAL }, g);
+  T(g, String(n), { x: LX - 50, y: cy + 12, size: 34, fill: '#ffffff', weight: 800, anchor: 'middle' });
+  T(g, str, { x: LX, y, size, fill: INK, weight: 600 });
+  show(g, t0, .4);
+  return g;
+};
+const mathCol = (names, size = 44) => LX + Math.max(...names.map(s => uiW(s, size))) + 46;
+// the centre x that starts piece k of a line at x (to line rows up)
+const centreAt = (items, size, k, x) => {
+  const w = items.map(it => textW(typeof it === 'string' ? it : it.t, size));
+  return x - w.slice(0, k).reduce((a, b) => a + b, 0) + w.reduce((a, b) => a + b, 0) / 2;
+};
+// a line set on an "=" at x = eq: the left side ends before it, the right side (behind a "?" until tR) starts after it
+const eqLine = (p, left, right, eq, y, tL, tR, { size = 72, q = true } = {}) => {
+  const gap = size * .6;
+  const L = dLine(p, left, eq - gap, y, tL, { size, anchor: 'end' });
+  dLine(p, ['='], eq, y, tL, { size });
+  const R = q ? askRow(p, right, 0, eq + gap, y, tL, tR, { size, anchor: 'start' }) : dLine(p, right, eq + gap, y, tL, { size, anchor: 'start' });
+  return { L, R };
+};
+// his groups picture (homework 11-9 Part 2): n dashed boxes of k hundreds each, two across, one group after another
+const hundredsGroups = (p, n, k, cx, cy, t0, gap = .17) => {
+  const GX = 132, W = 104, H = 190, s = 36;
+  for (let i = 0; i < n; i++) {
+    const bx = cx + (i - (n - 1) / 2) * GX, g = G(p, { o: 0, y: 14 });
+    mk('rect', { x: bx - W / 2, y: cy - H / 2, width: W, height: H, rx: 14, fill: '#f7f9fa', stroke: '#55646a', 'stroke-width': 3, 'stroke-dasharray': '10 7' }, g);
+    for (let j = 0; j < k; j++) put(dFlat(g, bx + (j % 2 - .5) * 42, cy + (Math.floor(j / 2) - (k / 2 - 1) / 2) * 42, s), { o: 1 });
+    tw(g, { o: 1, y: 0 }, t0 + i * gap, .4, out);
+  }
+};
+
+const BEATS = [
+  ['intro', 'Multiply with zeros', (m) => {
+    titleBeat('Lesson 4.1', 'Multiply with zeros', '')(m);
+    // "Cover the zeros. Do the fact. Put the zeros back." — each step when Ava says it
+    const steps = [['Cover the zeros.', 0], ['Do the fact.', 1.69], ['Put the zeros back.', 3.025]], SZ = 40, GAP = 34;
+    const ws = steps.map(([s]) => uiW(s, SZ));
+    let x = 800 - (ws.reduce((a, b) => a + b, 0) + GAP * (steps.length - 1)) / 2;
+    steps.forEach(([s, off], i) => { dText(S.panel, s, x, 580, m('sub', off), { size: SZ, fill: COL.dim, anchor: 'start' }); x += ws[i] + GAP; });
+  }],
+
+  ['cover', 'Cover the zeros', (m) => {
+    const p = panel(0);
+    // "Here is seven times eight hundred." Its "?" waits for "… five thousand, six hundred" (next beat).
+    S.prob = ask(p, ['7', ' × ', '8', { t: '00', fill: ORANGE }, ' = ', { t: '5,6', fill: TEAL }, { t: '00', fill: ORANGE }], 5,
+      800, 172, .3, { size: 92, card: BLUE_BG });
+    S.names = ['Cover the zeros:', 'Do the fact:', 'Put back 2 zeros:'];
+    S.mx = mathCol(S.names);
+    // 1 "Cover the zeros." — the sticky note goes over 00
+    stepName(p, 1, S.names[0], 345, m('cover'));
+    S.r1 = dLine(p, ['7', ' × ', '8', { t: '00', fill: ORANGE }], S.mx, 345, m('cover'), { size: 80, anchor: 'start' });
+    S.note = coverZeros(S.r1, 3, 3, m('cover', .5));
+    // 2 "Do the fact." — the fact's digits get his underline
+    stepName(p, 2, S.names[1], 500, m('fact'));
+    uline(S.r1, 0, 0, m('fact', .3));
+    uline(S.r1, 2, 2, m('fact', .45));
+    // "Seven times eight is fifty-six."
+    S.r2 = askRow(p, [{ t: '7 × 8 = ', fill: TEAL }, { t: '56', fill: TEAL }], 1, S.mx, 500, m('ans'), m('ans', 1.5),
+      { size: 80, anchor: 'start', card: TEAL_BG, qFill: TEAL });
+  }],
+
+  ['back', 'Put back the zeros', (m) => {
+    const p = S.prob.parentNode, zeros = S.r1.row[3];
+    // "Eight hundred has two zeros."
+    dNudge(S.prob.row[3], m('count', .3));
+    dNudge(S.note, m('count', 1.0));
+    const nx = zeros._px + zeros._w / 2 + 44;
+    dText(p, '2 zeros', nx, 330, m('count', .9), { size: 40, fill: ORANGE, weight: 800, anchor: 'start' });
+    // 3 "Put back two zeros." — the note comes off
+    stepName(p, 3, S.names[2], 655, m('put'));
+    dLift(S.note, m('put', .2));
+    dNudge(zeros, m('put', .75));
+    // "Seven times eight hundred is five thousand, six hundred." 56 comes down from the fact, 00 from where it was covered
+    const r3 = dLine(p, [{ t: '5,6', fill: TEAL }, { t: '00', fill: ORANGE }], S.mx, 655, m('eq', 1.75), { size: 80, anchor: 'start' });
+    flyPiece(r3, 0, spot(S.r2, 1), m('eq', 1.75));
+    flyPiece(r3, 1, spot(S.r1, 3), m('eq', 1.85), .9);
+    reveal(S.prob, m('eq', 1.8));
+    answered(S.prob, m('eq', 1.8));
+  }],
+
+  ['why', 'Why it works', (m) => {
+    const p = panel(0);
+    dText(p, 'Why does it work?', 800, 92, .3, { size: 48, fill: INK, weight: 700 });
+    // "Seven times eight hundreds …" — 7 groups of 8 hundreds, one group after another
+    hundredsGroups(p, 7, 8, 800, 278, m('hund', .05));
+    dText(p, '7 groups of 8 hundreds', 800, 432, m('hund', .3), { size: 38, fill: COL.dim, weight: 700 });
+    // "… is fifty-six hundreds." (his units line: "4 × 8 hundreds = 32 hundreds")
+    const EQ = 790, SZ = 66;
+    const l1 = eqLine(p, [{ t: '7', fill: TEAL }, ' × ', { t: '8', fill: TEAL }, ' hundreds'], [{ t: '56', fill: TEAL }, ' hundreds'],
+      EQ, 580, m('hund'), m('hund', 1.9), { size: SZ });
+    uline(l1.L, 0, 0, m('hund', .5));
+    uline(l1.L, 2, 2, m('hund', .6));
+    // "Fifty-six hundreds is five thousand, six hundred."
+    const left2 = [{ t: '56', fill: TEAL }, ' hundreds'], right2 = [{ t: '5,6', fill: TEAL }, { t: '00', fill: ORANGE }];
+    const gap = SZ * .6, x0 = EQ - gap - textW('56 hundreds', SZ) - SZ * .55, x1 = EQ + gap + textW('5,600', SZ) + SZ * .55;
+    dCard(p, x0, 740 - SZ * .98, x1 - x0, SZ * 1.36, ORANGE_BG, m('same'));
+    eqLine(p, left2, right2, EQ, 740, m('same'), m('same', 1.45), { size: SZ });
+  }],
+
+  ['tens', 'With tens', (m) => {
+    const p = panel(0);
+    dText(p, 'It works with tens too.', 800, 92, .3, { size: 48, fill: INK, weight: 700 });
+    // "Four times seventy." — its "?" waits for "Two hundred eighty."
+    const prob = ask(p, ['4', ' × ', '7', { t: '0', fill: ORANGE }, ' = ', { t: '28', fill: TEAL }, { t: '0', fill: ORANGE }], 5,
+      800, 215, m('p'), { size: 88, card: BLUE_BG });
+    const names = ['Cover the zero:', 'Do the fact:', 'Put back 1 zero:'], mx = mathCol(names);
+    // 1 "Cover the zero."
+    stepName(p, 1, names[0], 380, m('f'));
+    const r1 = dLine(p, ['4', ' × ', '7', { t: '0', fill: ORANGE }], mx, 380, m('f'), { size: 80, anchor: 'start' });
+    const note = coverZeros(r1, 3, 3, m('f', .45));
+    // 2 "Four times seven is twenty-eight."
+    stepName(p, 2, names[1], 530, m('f', 1.45));
+    uline(r1, 0, 0, m('f', 1.5));
+    uline(r1, 2, 2, m('f', 1.65));
+    const r2 = askRow(p, [{ t: '4 × 7 = ', fill: TEAL }, { t: '28', fill: TEAL }], 1, mx, 530, m('f', 1.45), m('f', 2.75),
+      { size: 80, anchor: 'start', card: TEAL_BG, qFill: TEAL });
+    // 3 "Put back one zero."
+    stepName(p, 3, names[2], 680, m('z'));
+    dLift(note, m('z', .2));
+    dNudge(r1.row[3], m('z', .8));
+    // "Two hundred eighty."
+    const r3 = dLine(p, [{ t: '28', fill: TEAL }, { t: '0', fill: ORANGE }], mx, 680, m('a', -.1), { size: 80, anchor: 'start' });
+    flyPiece(r3, 0, spot(r2, 1), m('a', -.1));
+    flyPiece(r3, 1, spot(r1, 3), m('a', 0), .9);
+    reveal(prob, m('a'));
+    answered(prob, m('a'));
+  }],
+
+  ['trap', 'Watch out', (m) => {
+    const p = panel(0);
+    dWatchOut(p, .3, 800, 78);
+    // "Six times five thousand."
+    const prob = dLine(p, ['6', ' × ', '5', { t: ',000', fill: ORANGE }], 800, 195, m('p'), { size: 88, card: BLUE_BG });
+    const names = ['Do the fact:', 'Put back 3 zeros:'], mx = mathCol(names);
+    // 1 "Do the fact. Six times five is thirty."
+    stepName(p, 1, names[0], 355, m('f'));
+    uline(prob, 0, 0, m('f', .3));
+    uline(prob, 2, 2, m('f', .45));
+    const r1 = askRow(p, [{ t: '6 × 5 = ', fill: TEAL }, { t: '3', fill: TEAL }, { t: '0', fill: TEAL }], 1, mx, 355, m('f', 1.3), m('f', 2.6),
+      { size: 76, anchor: 'start', card: TEAL_BG, qFill: TEAL });
+    // "The fact ends in zero. Keep that zero." (his homework: "Fact ends in 0? Keep that 0.")
+    ring(r1, 2, m('keep', .85));
+    dText(p, 'Keep that 0.', r1._card.x + r1._card.w + 40, 343, m('keep', 1.9), { size: 42, fill: TEAL, weight: 800, anchor: 'start' });
+    // 2 "Then put back three zeros."
+    stepName(p, 2, names[1], 525, m('put'));
+    dNudge(prob.row[3], m('put', .8));
+    // "Thirty thousand." 30 comes down from the fact (its 0 kept), the three zeros from 5,000
+    const SZ = 66, right = dRight(p, ['6 × 5', { t: ',000', fill: ORANGE }, ' = ', { t: '30', fill: TEAL }, { t: ',000', fill: ORANGE }],
+      mx, 525, m('a', -.15), { size: SZ, anchor: 'start' });
+    flyPiece(right, 3, [(r1.row[1]._px + r1.row[2]._px) / 2, r1.row.y], m('a', -.1));
+    flyPiece(right, 4, spot(prob, 3), m('a', 0), .9);
+    // "Not three thousand." Only the wrong number is red.
+    const bad = ['6 × 5,000 = ', { t: '3,000', fill: RED }];
+    dMistake(p, bad, centreAt(bad, SZ, 0, mx), 690, m('not', .1), null, { size: SZ, strike: [1, 1] });
+  }, { minDur: 18.5 }],                                            // the finished mistake holds 2.5 s
+
+  ['wrap', 'Remember', rememberBeat([['Cover the zeros.', 'w1'], ['Do the fact.', 'w2'], ['Put the zeros back.', 'w3']])],
+].map(([id, title, run, extra]) => ({ id, title, run, ...extra }));
+
+boot();
+</script>
+</body>
+</html>

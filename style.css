@@ -648,7 +648,7 @@ button.answer-btn.incorrect { background: #f8d7da; border-color: #dc3545; color:
 /* ── HINT BOX with its own speaker (10/7) ── */
 .hint-box {
   display: flex; align-items: center; gap: 10px;
-  font-size: 0.9rem; font-weight: 600; color: #555; line-height: 1.5;
+  font-size: 1rem;   /* 16 px: the kid-text minimum (was 0.9rem = 14.4 px; Web Design Expert 11/13) */ font-weight: 600; color: #555; line-height: 1.5;
   background: #f0f0f0; border-radius: 8px; padding: 6px 10px; margin-top: 8px;
 }
 .hint-box .hint-speak-btn { font-size: 1rem; min-width: 36px; padding: 4px 8px; background: #fff; }
@@ -789,7 +789,7 @@ button.answer-btn.incorrect { background: #f8d7da; border-color: #dc3545; color:
 /* Only a 🔊 that must be pressed to go on gets attention (Marcos 11/4: "i dont think these need to glow unless it
    has to be pressed in order to advance"): the 🔊 on the directions, question, choices, hint, word cards and
    feedback are a choice, so they stay plain. */
-.listen-note { font-size: 0.95rem; font-weight: 700; color: #6b3d00; }
+.listen-note { font-size: 1.05rem;   /* ≥ 16 px (kid text size; was 0.95rem = 15.2 px) */  font-weight: 700; color: #6b3d00; }
 .listen-dir    { background: #fdecea; border-color: #f1a9a0; }
 .listen-dir h3 { color: #922b21; }
 
@@ -1021,3 +1021,41 @@ h1 { font-weight: 800; letter-spacing: 0.3px; }
 /* Module 4 welcome picture: a times-ten pattern (3 × 8, 3 × 80, 3 × 800) — the boxes hold a whole equation */
 .wp-art .wp-art-box { width: auto; min-width: 7.5em; height: 26px; padding: 0 10px; white-space: nowrap; font-size: 0.85rem; justify-content: flex-start; }
 .wp-art { padding-bottom: 12px; }
+
+/* ── 🎬 THE LESSON VIDEOS (Marcos 11/13; video.js) ──
+   One video at a time, inside the card: its name, its direction with 🔊 (read first; the video is locked until it
+   is heard), then the video. Help buttons (🎬 Show me / 🎬 Watch how) are plain — no glow (Marcos 11/4: only a
+   button that must be pressed to go on draws attention; the Warm-Up video's own Play pulses, inside the video). */
+#video-host:empty, #video-host-miss:empty { display: none; }
+/* no box around the video (Web Design Expert 11/13: card › box › panel › video, the video crossing two borders); the
+   direction row right above it groups them */
+.video-panel { scroll-margin-top: 64px; margin: 14px 0 6px; padding: 0; background: none; border: 0; }
+.question-header, #feedback { scroll-margin-top: 80px; }
+#question-text.vid-wait .video-show-btn { visibility: hidden; }   /* no help video while a Listen is owed */
+.video-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+.video-title { font-weight: 800; font-size: 1.2rem; color: #1d3f8f; }
+.video-close { font: inherit; font-size: 1rem; font-weight: 800; min-height: 44px; padding: 6px 16px; border-radius: 12px;
+  border: 2px solid #8fb3ef; background: #fff; color: #1d3f8f; cursor: pointer; }
+.video-close:hover { background: #eaf2ff; }
+.video-dir { display: flex; align-items: center; gap: 10px; padding: 4px 2px 10px; margin: 0; }
+.video-dir .video-close { margin-left: auto; white-space: nowrap; }
+.video-dir .dir-text { margin: 0; font-size: 1.15rem; font-weight: 700; color: #1d2b33; }
+/* the video's picture is 16:9; under it the player's bar (about 56 px). As big as the screen allows, not just the card
+   (kid text size, 10/9: labels 16 px at least on a Chromebook, 1366 × 650 inside the browser — in the 688 px card a video's
+   labels came out 14 px): the height of the screen less the banner and the direction, never narrower than the card,
+   centred on it. At 1366 × 650 that is 800 px wide (the picture at 0.5 of its size: its smallest labels 16–17 px), and the
+   whole video with its bar fits under the banner. */
+.video-frame-wrap { box-sizing: content-box; position: relative; width: max(100%, min(94vw, calc((100vh - 200px) * 16 / 9)));
+  left: 50%; transform: translateX(-50%); aspect-ratio: 16 / 9; padding-bottom: 58px; border-radius: 14px; overflow: hidden; background: #e2e5e8; }
+.video-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+.video-frame-wrap.locked .video-frame { pointer-events: none; }
+.video-frame-wrap.locked::after { content: '🔊 Listen first…'; position: absolute; inset: 0; display: grid; place-items: center;
+  background: rgba(207, 212, 217, .6); font-size: 1.4rem; font-weight: 800; color: #1d3f8f; }
+.video-show-btn { font: inherit; font-size: 1rem; font-weight: 800; min-height: 44px; margin-left: auto; padding: 6px 16px;
+  border-radius: 999px; border: 2px solid #1e63c4; background: #eaf2ff; color: #1e63c4; cursor: pointer; white-space: nowrap; }
+.video-show-btn:hover { background: #dbe8ff; }
+.video-show-btn[aria-expanded="true"] { background: #1e63c4; color: #fff; }
+.video-offer { margin-top: 12px; }
+.video-offer .video-show-btn { margin-left: 0; }
+.feedback-box.video-box { padding: 0; background: none; border: 0; box-shadow: none; }
+.feedback-box.video-box .video-panel { margin-top: 0; }

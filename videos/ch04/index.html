@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Division patterns · Math Module 4</title>
+<link rel="stylesheet" href="../lib/engine.css?v=fa68c4a8">
+<link rel="expect" href="#bar" blocking="render">
+</head>
+<body>
+<script src="../lib/engine.js?v=d6885892"></script>
+<script src="../lib/mm4.js?v=1928c069"></script>
+<script src="../lib/embed.js?v=3bc13d2d"></script>
+<script src="audio/en/timings.js?v=2f5549a8"></script>
+<script>
+'use strict';
+/* Mr. O's 4th grade · Math Module 4, Lesson 4.2 (4.NBT.6): division patterns.
+   Redrawn 11/13 to show HIS lessons and nothing new (Mr. O: "emphasize what I taught … not introduce something new"):
+   · fact = his Lesson 4.2 notes: the fact family "F1 × F2 = P, P ÷ F1 = F2", with → over the times fact and ← under it:
+     9 × 5 = 45, so 45 ÷ 9 = 5 (no sharing pictures: he did not use them)
+   · pattern = his division ladder (notes "12 ÷ 4 = 3 / 120 ÷ 4 = 30 / 1,200 ÷ 4 = 300", the fact's digits underlined
+     in green; homework 11-11 Part 1 "6 ÷ 3 = 2 / 60 ÷ 3 = 20 / 600 ÷ 3 = 200 … Each line gets one more zero."):
+     45 ÷ 9 = 5 / 450 ÷ 9 = 50 / 4,500 ÷ 9 = 500 on one "=", the added zeros orange
+   · mistake = 450 has one more zero than 45, so the answer gets one more zero: 50, not 500
+   Colours: teal = the fact, orange = the zeros that come along, red = the mistake only, blue card = the problem. */
+const CHAPTER = { number: 4, title: 'Division patterns', minutes: 1, language: 'en' };
+
+/* ── his board, as helpers ── */
+// pieces ks of a line wait until t, the word that says them
+const later = (line, ks, t) => ks.forEach(k => { put(line.row[k], { o: 0 }); show(line.row[k], t, .35); });
+// a line whose answer (pieces k to the end) hides behind a "?" until reveal(line, t)
+const ask = (p, items, k, x, y, t0, { qFill = INK, ...opts } = {}) => {
+  const line = dLine(p, items, x, y, t0, opts), row = line.row;
+  row.slice(k).forEach(e => put(e, { o: 0 }));
+  line._q = M(line, ['?'], { x: row[k]._px - row[k]._w / 2 + textW('?', row.size) / 2, y: row.y, size: row.size, fill: qFill });
+  line._k = k;
+  return line;
+};
+const reveal = (line, t) => { hide(line._q, t, .2); line.row.slice(line._k).forEach(e => show(e, t + .1, .35)); };
+const askRow = (p, items, k, x, y, t0, tAns, opts) => { const line = ask(p, items, k, x, y, t0, opts); reveal(line, tAns); return line; };
+// the problem's blue card turns into an orange answer card
+const answered = (line, t) => tw(line.firstChild, { c_fill: ORANGE_BG }, t, .5);
+// piece k of a line flies in from (x, y) at t0: the fact's digits from the fact, the zeros from where they were covered
+const flyPiece = (line, k, [x, y], t0, dur = .8) => {
+  const e = line.row[k];
+  put(e, { x, y, o: 0 });
+  tw(e, { o: 1 }, t0, .15);
+  tw(e, { x: e._px, y: line.row.y }, t0, dur, io);
+};
+const spot = (line, k) => [line.row[k]._px, line.row.y];
+// the kit's sticky note over pieces i..j, set a little right so it does not hide the end of the fact's last digit
+const coverZeros = (line, i, j, t0) => { const n = dCover(line, i, j, t0); put(n, { x: st(n).x + line.row.size * .06 }); return n; };
+// his green underline under the fact's digits (teal here): under pieces i..j of a line, drawn on at t0
+const uline = (line, i, j, t0, color = TEAL) => {
+  const row = line.row, sz = row.size, a = row[i]._px - row[i]._w / 2 + sz * .04, b = row[j]._px + row[j]._w / 2 - sz * .04, y = row.y + sz * .17;
+  draw(path(line, `M${a} ${y}H${b}`, { stroke: color, 'stroke-width': Math.max(5, sz * .075), fill: 'none' }, { d: 0 }), t0, .4);
+};
+// a ring drawn round piece k of a line
+const ring = (line, k, t0, color = TEAL) => {
+  const e = line.row[k], sz = line.row.size, cx = e._px, cy = line.row.y - sz * .36, rx = e._w / 2 + sz * .07, ry = sz * .5;
+  draw(path(line, `M${cx} ${cy - ry}A${rx} ${ry} 0 1 0 ${cx + .1} ${cy - ry}`, { stroke: color, 'stroke-width': 6, fill: 'none' }, { d: 0 }), t0, .5);
+};
+// his numbered steps (homework 11-9 Part 5): a teal number, then the step's name in ink; the maths sits in one column after
+const LX = 236;
+const stepName = (p, n, str, y, t0, size = 44) => {
+  const g = G(p, { o: 0 }), cy = y - size * .34;
+  mk('circle', { cx: LX - 50, cy, r: 28, fill: TEAL }, g);
+  T(g, String(n), { x: LX - 50, y: cy + 12, size: 34, fill: '#ffffff', weight: 800, anchor: 'middle' });
+  T(g, str, { x: LX, y, size, fill: INK, weight: 600 });
+  show(g, t0, .4);
+  return g;
+};
+const mathCol = (names, size = 44) => LX + Math.max(...names.map(s => uiW(s, size))) + 46;
+// the centre x that starts piece k of a line at x (to line rows up)
+const centreAt = (items, size, k, x) => {
+  const w = items.map(it => textW(typeof it === 'string' ? it : it.t, size));
+  return x - w.slice(0, k).reduce((a, b) => a + b, 0) + w.reduce((a, b) => a + b, 0) / 2;
+};
+// a line set on an "=" at x = eq: the left side ends before it, the right side (behind a "?" until tR) starts after it
+const eqLine = (p, left, right, eq, y, tL, tR, { size = 72, q = true } = {}) => {
+  const gap = size * .6;
+  const L = dLine(p, left, eq - gap, y, tL, { size, anchor: 'end' });
+  dLine(p, ['='], eq, y, tL, { size });
+  const R = q ? askRow(p, right, 0, eq + gap, y, tL, tR, { size, anchor: 'start' }) : dLine(p, right, eq + gap, y, tL, { size, anchor: 'start' });
+  return { L, R };
+};
+// the kit's right answer (orange card and ✓) whose answer, pieces k.., waits behind a "?" until tAns, the word that says it
+const rightAsk = (p, items, k, x, y, t0, tAns, { size = 64, anchor = 'middle', q = true } = {}) => {
+  const line = askRow(p, items, k, x, y, t0, tAns, { size, anchor, card: ORANGE_BG });
+  if (!q) line._q.remove();
+  dTick(p, line._card.x + line._card.w + 44, y - size * .3, tAns + .4);
+  return line;
+};
+// his board's straight arrow (Lesson 4.2 notes: → over "3 × 4 = 12", ← under it), drawn on from x1 to x2 at height y
+const boardArrow = (p, x1, x2, y, t0, dur = .8) => {
+  const g = G(p, {}), d = Math.sign(x2 - x1);
+  draw(path(g, `M${x1} ${y}H${x2}`, { stroke: INK, 'stroke-width': 5, fill: 'none' }, { d: 0 }), t0, dur);
+  draw(path(g, `M${x2 - 24 * d} ${y - 15}L${x2} ${y}L${x2 - 24 * d} ${y + 15}`, { stroke: INK, 'stroke-width': 5, fill: 'none' }, { d: 0 }),
+    t0 + dur * .85, .25);
+  return g;
+};
+// his fact family (Lesson 4.2 notes: "F1 × F2 = P, so P ÷ F1 = F2"), on a teal card: the times fact with → over it and
+// ← under it (back again: divide), then "so" and the divide fact, both on one "=" at eq. Times at tm.a (product at tm.p),
+// "so" and the ← at tm.so, divide at tm.b (its answer at tm.q). Returns the pieces, to hide or build on.
+const factFamily = (p, f1, f2, pr, eq, y, tm, size = 76) => {
+  const tt = s => ({ t: s, fill: TEAL }), yB = y + size * 1.75;
+  const card = dCard(p, 0, 0, 10, 10, TEAL_BG, tm.a);
+  const A = eqLine(p, [tt(f1), ' × ', tt(f2)], [tt(pr)], eq, y, tm.a, tm.p, { size });
+  const B = eqLine(p, [tt(pr), ' ÷ ', tt(f1)], [tt(f2)], eq, yB, tm.b, tm.q, { size });
+  const left = l => l.L.row.x - l.L.row.w, right = l => l.R.row.x + l.R.row.w;
+  const x0 = Math.min(left(A), left(B)) - 10, x1 = Math.max(right(A), right(B)) + 10;
+  const over = boardArrow(p, x0, x1, y - size * 1.02, tm.a + .1, 1.0);
+  const under = boardArrow(p, right(A) + 10, left(A) - 10, y + size * .45, tm.so + .25, .9);
+  const so = dText(p, 'so', left(B) - 30, yB - 4, tm.so, { size: 44, fill: TEAL, weight: 800, anchor: 'end' });
+  const cx0 = x0 - 130, cy0 = y - size * 1.45;
+  [['x', cx0], ['y', cy0], ['width', x1 + 70 - cx0], ['height', yB + size * .55 - cy0]].forEach(([k, v]) => card.setAttribute(k, v));
+  return { A, B, card, over, under, so };
+};
+
+const BEATS = [
+  ['intro', 'Division patterns', titleBeat('Lesson 4.2', 'Division patterns', 'Do the fact first.')],
+
+  ['fact', 'Start with a fact', (m) => {
+    const p = panel(0);
+    S.head = dText(p, 'Start with a fact.', 800, 96, .3, { size: 48, fill: INK, weight: 700 });
+    // "Nine times five is forty-five, so forty-five divided by nine is five."
+    S.fam = factFamily(p, '9', '5', '45', 790, 250, { a: m('fam'), p: m('fam', 1.3), so: m('fam', 2.5), b: m('fam', 2.85), q: m('fam', 4.7) }, 72);
+  }],
+
+  ['pattern', 'The pattern', (m) => {
+    const p = S.head.parentNode, B = S.fam.B, EQ = 790, SZ = 72, z = s => ({ t: s, fill: ORANGE }), tt = s => ({ t: s, fill: TEAL });
+    hide(S.head, 0, .3);
+    dText(p, 'Now look at the pattern.', 800, 96, .32, { size: 48, fill: INK, weight: 700 });
+    // his ladder starts at the fact: its digits get his underline
+    uline(B.L, 0, 0, .5);
+    uline(B.L, 2, 2, .65);
+    // "Four hundred fifty divided by nine is fifty."
+    const l2 = eqLine(p, [tt('45'), z('0'), ' ÷ ', tt('9')], [tt('5'), z('0')], EQ, 505, m('l2'), m('l2', 2.35), { size: SZ });
+    uline(l2.L, 0, 0, m('l2', .45));
+    uline(l2.L, 3, 3, m('l2', .6));
+    // "Four thousand, five hundred divided by nine is five hundred."
+    const l3 = eqLine(p, [tt('4,5'), z('00'), ' ÷ ', tt('9')], [tt('5'), z('00')], EQ, 635, m('l3'), m('l3', 3.45), { size: SZ });
+    uline(l3.L, 0, 0, m('l3', .45));
+    uline(l3.L, 3, 3, m('l3', .6));
+    // "Each line gets one more zero."
+    dText(p, 'Each line gets one more zero.', 800, 775, m('zeros'), { size: 48, fill: INK, weight: 700 });
+    [l2.L.row[1], l2.R.row[1]].forEach(e => dNudge(e, m('zeros', 1.2)));
+    [l3.L.row[1], l3.R.row[1]].forEach(e => dNudge(e, m('zeros', 1.5)));
+  }],
+
+  ['mistake', 'Watch out', (m) => {
+    const p = panel(0), z = s => ({ t: s, fill: ORANGE }), tt = s => ({ t: s, fill: TEAL });
+    dWatchOut(p, .3, 800, 100);
+    // "Four hundred fifty has one more zero than forty-five."
+    const more = dLine(p, [tt('45'), z('0'), ' has one more zero than ', tt('45')], 800, 272, m('w', -.05), { size: 58, card: SUN_BG });
+    later(more, [3], m('w', 2.75));
+    dNudge(more.row[1], m('w', 1.95));
+    // "So the answer gets one more zero. Fifty." The right answer, its 50 when Ava says it
+    const X = 560, SZ = 72;
+    rightAsk(p, [tt('45'), z('0'), ' ÷ ', tt('9'), ' = ', tt('5'), z('0')], 5, X, 470, m('ok'), m('ok', 2.35), { size: SZ, anchor: 'start' });
+    // "Not five hundred." Only the wrong number is red.
+    const bad = ['450 ÷ 9 = ', { t: '500', fill: RED }];
+    dMistake(p, bad, centreAt(bad, SZ, 0, X), 660, m('not', .1), null, { size: SZ, strike: [1, 1] });
+  }, { minDur: 12.8 }],                                            // the finished mistake holds 2.5 s
+
+  ['wrap', 'Remember', rememberBeat([['Do the fact first.', 'w1'], ['Each answer gets one more zero.', 'w2']])],
+].map(([id, title, run, extra]) => ({ id, title, run, ...extra }));
+
+boot();
+</script>
+</body>
+</html>

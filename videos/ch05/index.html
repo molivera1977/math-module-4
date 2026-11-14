@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two estimates · Math Module 4</title>
+<link rel="stylesheet" href="../lib/engine.css?v=fa68c4a8">
+<link rel="expect" href="#bar" blocking="render">
+</head>
+<body>
+<script src="../lib/engine.js?v=d6885892"></script>
+<script src="../lib/mm4.js?v=1928c069"></script>
+<script src="../lib/embed.js?v=3bc13d2d"></script>
+<script src="audio/en/timings.js?v=7f62b518"></script>
+<script>
+'use strict';
+/* Mr. O's 4th grade · Math Module 4, Lesson 4.3 (4.NBT.5): two estimates. Drawn like HIS board notes, page 5
+   ("Two estimates: 2 × 360"), and his classwork Part 2 ("Circle the two numbers it is between. Multiply by each one."):
+   the problem, a number line labelled with the hundreds only (200 300 400 500) and the number marked on it, the two
+   hundreds it is between circled, "5 × 200 = 1,000   5 × 300 = 1,500" in a row under the line, then "Between 1,000
+   and 1,500". Nothing he did not use (no second number line, no braces). Every number appears on the word that says it
+   (offsets from the marks, read off narration.en.timings.json); the number line is to scale (dNumberLine's xOf). */
+const CHAPTER = { number: 5, title: 'Two estimates', minutes: 1, language: 'en' };
+
+const WHITE = '#ffffff', EDGE = '#d3dde0', TICK = '#8d989f';
+const every = (a, b, d) => Array.from({ length: Math.round((b - a) / d) + 1 }, (_, k) => a + k * d);
+// a piece that waits for its word: hidden, then faded in at t
+const later = (e, t, dur = .35) => { put(e, { o: 0 }); show(e, t, dur); return e; };
+// a line in ink whose pieces come in on their words (times[k] for piece k). A dMistake card with the same pieces lands
+// on top of it later, so the claim is on screen as she says it and turns red when she judges it.
+const sayLine = (p, items, x, y, times, size) => {
+  const ln = dLine(p, items, x, y, times[0], { size });
+  ln.row.forEach((e, k) => { if (k) later(e, times[k]); });
+  return ln;
+};
+// HIS BOARD: the white panel with a thin gray edge that his notes are written on
+const boardCard = (p, x, y, w, h, t0) => {
+  const r = mk('rect', { x, y, width: w, height: h, rx: 26, fill: WHITE, stroke: EDGE, 'stroke-width': 3 }, p);
+  put(r, { o: 0 }); show(r, t0, .5);
+  return r;
+};
+// a circle drawn round a label, the way he circles the two hundreds on the board (drawn around its own centre, so a
+// dNudge pops it in place)
+const ring = (p, cx, cy, t0, { rx = 74, ry = 40, color = BLUE } = {}) => {
+  const g = G(p, { x: cx, y: cy });
+  const e = path(g, `M${-rx} 0A${rx} ${ry} 0 1 1 ${rx} 0A${rx} ${ry} 0 1 1 ${-rx} 0`, { stroke: color, 'stroke-width': 5, fill: 'none' }, { d: 0 });
+  draw(e, t0, .55);
+  return g;
+};
+
+/* HIS NUMBER LINE (board notes p5, classwork Part 2): arrows at both ends, a dark tick at each hundred, short gray ticks
+   every ten, and his labels: the hundreds, 200 300 400 500. Returns dNumberLine's object plus .lab[v] (each label). */
+const LY = 345;
+const hisLine = (p, t0) => {
+  const nl = dNumberLine(p, { x0: 340, x1: 1260, y: LY, from: 200, to: 500, ticks: [200, 300, 400, 500], t0 });
+  every(200, 500, 10).filter(v => v % 100).forEach(v => {
+    const tk = path(nl.g, `M${nl.xOf(v)} ${LY - 10}V${LY + 10}`, { stroke: TICK, 'stroke-width': 3, fill: 'none' }, { d: 0 });
+    draw(tk, t0 + .3, .25);
+  });
+  [[nl.xOf(200) - 40, -1], [nl.xOf(500) + 40, 1]].forEach(([x, dir]) => {
+    const a = path(nl.g, `M${x + dir * 18} ${LY}L${x - dir * 6} ${LY - 14}L${x - dir * 6} ${LY + 14}Z`, { fill: INK, stroke: INK, 'stroke-width': 2 });
+    put(a, { o: 0 }); show(a, t0 + .5, .3);
+  });
+  nl.lab = {};
+  [200, 300, 400, 500].forEach(v => { nl.lab[v] = dText(nl.g, String(v), nl.xOf(v), LY + 78, t0 + .4, { size: 46, fill: INK, weight: 600 }); });
+  return nl;
+};
+const RING_Y = LY + 62;                             // the middle of a label: where its circle goes
+const ANS = [['Between ', '1,000', ' and ', '1,500'], 800, 775];   // his answer line, where it stands (answer, mistake)
+
+const BEATS = [
+  ['intro', 'Two estimates', titleBeat('Lesson 4.3', 'Two estimates', 'An estimate is a close answer.')],
+
+  ['line', 'Circle the two hundreds', (m) => {
+    const p = panel(0);
+    S.prob = dLine(p, ['5 × ', '234'], 800, 150, .3, { size: 84, card: BLUE_BG });
+    dNudge(S.prob.row[1], m('line', -1.81));                                // "two hundred thirty-four"
+    boardCard(p, 200, 235, 1200, 420, m('line'));
+    // "Look at the number line."
+    const nl = S.nl = hisLine(p, m('line'));
+    // "Two hundred thirty-four is between two hundred and three hundred."
+    nl.dot(234, m('circle'), { label: '234', labelY: -40, labelSize: 46 });
+    dNudge(nl.lab[200], m('circle', 2.17));                                  // "two hundred"
+    dNudge(nl.lab[300], m('circle', 3.10));                                  // "three hundred"
+    // "Circle them."
+    S.r200 = ring(nl.g, nl.xOf(200), RING_Y, m('circle', 4.30));
+    S.r300 = ring(nl.g, nl.xOf(300), RING_Y, m('circle', 4.48));
+  }],
+
+  ['ends', 'Multiply by each one', (m) => {
+    const p = S.panel;
+    // "Multiply by each one."
+    dNudge(S.r200, m('low', -1.17)); dNudge(S.r300, m('low', -.84));       // "each" … "one"
+    // "Five times two hundred is one thousand." — written in a row under the line, as on his board
+    const lo = S.lo = dLine(p, ['5 × ', '200', ' = ', { t: '1,0', fill: TEAL }, { t: '00', fill: ORANGE }], 520, 575, m('low'), { size: 62 });
+    later(lo.row[1], m('low', .88)); later(lo.row[2], m('low', 1.58));
+    later(lo.row[3], m('low', 1.78)); later(lo.row[4], m('low', 1.78));     // "one thousand"
+    dNudge(S.r200, m('low', .88));
+    // "Five times three hundred is one thousand, five hundred."
+    const hi = S.hi = dLine(p, ['5 × ', '300', ' = ', { t: '1,5', fill: TEAL }, { t: '00', fill: ORANGE }], 1080, 575, m('high'), { size: 62 });
+    later(hi.row[1], m('high', .82)); later(hi.row[2], m('high', 1.68));
+    later(hi.row[3], m('high', 1.89)); later(hi.row[4], m('high', 1.89));  // "one thousand, five hundred"
+    dNudge(S.r300, m('high', .82));
+  }],
+
+  ['answer', 'Between', (m) => {
+    const p = S.panel;
+    S.prob.row.forEach(e => dNudge(e, m('so', .43)));                        // "five times two hundred thirty-four"
+    // "…is between one thousand and one thousand, five hundred." — his line, on the answer card
+    const ans = dLine(p, ...ANS, m('so', 2.93), { size: 66, card: ORANGE_BG });   // "between"
+    later(ans.row[1], m('so', 3.42)); later(ans.row[2], m('so', 4.23)); later(ans.row[3], m('so', 4.45));
+  }],
+
+  ['mistake', 'Watch out', (m) => {
+    const p = panel(0);
+    dWatchOut(p, .3, 800, 100);
+    dLine(p, ['5 × 234'], 800, 215, .3, { size: 72, card: BLUE_BG });
+    dRight(p, ...ANS, .3, { size: 66 });                                     // the answer, said in the last beat: it stays
+    dText(p, 'Multiply both numbers by 5.', 800, 350, m('w'), { size: 46, fill: INK, weight: 700 });   // her words
+    // "Two hundred and three hundred is not the answer." — said, then struck on "not"
+    sayLine(p, ['200', ' and ', '300'], 800, 520, [m('not'), m('not', .75), m('not', .92)], 66);
+    dMistake(p, ['200', ' and ', '300'], 800, 520, m('not', 2.03), 'not the answer', { size: 66 });
+  }, { minDur: 9.9 }],                                                       // the finished mistake holds 2.5 s
+
+  ['wrap', 'Remember', rememberBeat([['Circle the two numbers it is between.', 'w1'], ['Multiply by each one.', 'w2']])],
+].map(([id, title, run, extra]) => ({ id, title, run, ...extra }));
+
+boot();
+</script>
+</body>
+</html>

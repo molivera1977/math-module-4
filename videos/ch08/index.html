@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Break apart to multiply · Math Module 4</title>
+<link rel="stylesheet" href="../lib/engine.css?v=fa68c4a8">
+<link rel="expect" href="#bar" blocking="render">
+</head>
+<body>
+<script src="../lib/engine.js?v=d6885892"></script>
+<script src="../lib/mm4.js?v=1928c069"></script>
+<script src="../lib/embed.js?v=3bc13d2d"></script>
+<script src="audio/en/timings.js?v=d1329637"></script>
+<script>
+'use strict';
+/* Mr. O's 4th grade · Math Module 4, Lesson 4.5: mental math, break apart to multiply.
+   Drawn the way HIS board notes write it (Lesson 4.5 board notes, p3 "Break apart to multiply: 3 × 24"):
+   the problem, then three numbered lines, each written as Ava says it.
+     4 × 36 · 1  36 = 30 + 6 · 2  (4 × 30) + (4 × 6) · 3  120 + 24 = 144
+   The tens part is blue and the ones part green all the way down. Nothing he did not use (no area model).
+   The trap (her words): "Do not just add the six." 120 + 6 = 126. */
+const CHAPTER = { number: 8, title: 'Break apart to multiply', minutes: 1, language: 'en' };
+
+/* HIS BOARD: the problem at the top left, then numbered lines under it, each number in a teal circle */
+const BX = 450, LX = BX + 56, PX = BX - 30;        // the circles' centre, where the lines start, where the problem starts
+const PROB_Y = 150, L1_Y = 290, L2_Y = 410, PROD_Y = 518, L3_Y = 640, ANS_Y = 790;
+const TENS = GROUP[0], ONES = GROUP[1], TENS_BG = GROUP_BG[0], ONES_BG = GROUP_BG[1];
+
+// a numbered circle like his board's, beside the line at y, popping in as she says "Step n"
+const dBadge = (p, n, y, t0) => {
+  const g = G(p, { x: BX, y: y - 22, o: 0, s: .6 });
+  mk('circle', { cx: 0, cy: 0, r: 30, fill: TEAL }, g);
+  T(g, String(n), { x: 0, y: 12, size: 36, fill: '#ffffff', weight: 700, anchor: 'middle' });
+  tw(g, { o: 1, s: 1 }, t0, .45, back);
+  return g;
+};
+// show pieces ks of a line only at t (the number arrives when the voice says it)
+const later = (line, ks, t) => ks.forEach(k => { put(line.row[k], { o: 0 }); show(line.row[k], t, .4); });
+// the centre x of pieces i..j of a line
+const midOf = (line, i, j) => (line.row[i]._px - line.row[i]._w / 2 + line.row[j]._px + line.row[j]._w / 2) / 2;
+
+const BEATS = [
+  ['intro', 'Break apart to multiply', titleBeat('Lesson 4.5', 'Break apart to multiply', 'Multiply in your head.')],
+
+  ['steps', 'Three steps', (m) => {
+    const p = panel(0);
+    // "Here is four times thirty-six."
+    const prob = S.prob = dLine(p, ['4', ' × ', '36'], PX, PROB_Y, .3, { size: 96, card: BLUE_BG, anchor: 'start' });
+    // "Step one. Break the big number into tens and ones. Thirty-six is thirty plus six."
+    dBadge(p, 1, L1_Y, m('s1', .2));
+    dNudge(prob.row[2], m('s1', 1.9));                                         // "the big number"
+    const l1 = dLine(p, ['36', ' = ', { t: '30', fill: TENS }, ' + ', { t: '6', fill: ONES }], LX, L1_Y, m('s1', 4.55), { size: 64, anchor: 'start' });
+    later(l1, [1, 2], m('s1', 5.38));                                          // "is thirty"
+    later(l1, [3], m('s1', 6.0));                                              // "plus"
+    later(l1, [4], m('s1', 6.35));                                             // "six"
+    // "Step two. Multiply each part."
+    dBadge(p, 2, L2_Y, m('s2', .2));
+    const l2 = dLine(p, ['(4 × ', { t: '30', fill: TENS }, ')', ' + ', '(4 × ', { t: '6', fill: ONES }, ')'], LX, L2_Y, m('s2', 1.47), { size: 64, anchor: 'start' });
+    // "Four times thirty is one hundred twenty." — written under the 30's part
+    const p0 = S.p0 = dLine(p, ['4 × ', { t: '30', fill: TENS }, ' = ', { t: '120', fill: TENS }], LX, PROD_Y, m('s2', 3.43), { size: 56, card: TENS_BG, anchor: 'start' });
+    dNudge(l2.row[1], m('s2', 4.05));                                          // "thirty"
+    later(p0, [3], m('s2', 4.75));                                             // "one hundred twenty"
+    // "Four times six is twenty-four." — beside it, under the 6's part
+    const x1 = LX + p0.row.w + 56 * 1.1 + 40;
+    const p1 = S.p1 = dLine(p, ['4 × ', { t: '6', fill: ONES }, ' = ', { t: '24', fill: ONES }], x1, PROD_Y, m('s2b', .2), { size: 56, card: ONES_BG, anchor: 'start' });
+    dNudge(l2.row[5], m('s2b', .75));                                          // "six"
+    later(p1, [3], m('s2b', 1.3));                                             // "twenty-four"
+    // "Step three. Add. One hundred twenty plus twenty-four is one hundred forty-four."
+    dBadge(p, 3, L3_Y, m('s3', .2));
+    dNudge(p0.row[3], m('s3', 1.7)); dNudge(p1.row[3], m('s3', 1.85));        // "Add."
+    const l3 = S.sum = dLine(p, [{ t: '120', fill: TENS }, ' + ', { t: '24', fill: ONES }, ' = ', '144'], LX, L3_Y, m('s3', 2.49), { size: 64, anchor: 'start' });
+    dFly(l3, [0], [p0.row[3]._px, p0.row.y], m('s3', 2.49), .8);               // "One hundred twenty"
+    later(l3, [1], m('s3', 3.3));                                              // "plus"
+    later(l3, [2], m('s3', 3.6)); dFly(l3, [2], [p1.row[3]._px, p1.row.y], m('s3', 3.6), .8);   // "twenty-four"
+    later(l3, [3, 4], m('s3', 4.45));                                          // "is one hundred forty-four"
+  }],
+
+  ['answer', 'The answer', (m) => {
+    const p = S.panel;
+    // "So four times thirty-six is one hundred forty-four." — under his three lines, lined up with the problem
+    const ans = dLine(p, ['4 × 36 = ', '144'], PX, ANS_Y, m('a', .65), { size: 72, card: ORANGE_BG, anchor: 'start' });
+    later(ans, [1], m('a', 2.3));
+  }],
+
+  ['mistake', 'Watch out', (m) => {
+    const p = panel(0);
+    dWatchOut(p, .3, 800, 100);
+    // "Multiply both parts by four." — her words, then his line 2 again with both parts ticked
+    dText(p, 'Multiply both parts by 4.', 800, 200, m('w'), { size: 44, fill: INK });
+    const l2 = dLine(p, ['(', '4', ' × ', { t: '30', fill: TENS }, ')', ' + ', '(', '4', ' × ', { t: '6', fill: ONES }, ')'], 800, 318, m('w', .2), { size: 68 });
+    dTick(p, midOf(l2, 0, 4), 372, m('w', .8));                                // "both"
+    dTick(p, midOf(l2, 6, 10), 372, m('w', 1.15));                             // "parts"
+    dNudge(l2.row[1], m('w', 1.8)); dNudge(l2.row[7], m('w', 1.8));           // "by four"
+    // the right answer, then the mistake right under it, their 120s lined up
+    const wR = textW('120 + 24 = 144', 64), wM = textW('120 + 6 = 126', 64), left = 800 - wR / 2;
+    dRight(p, [{ t: '120', fill: TENS }, ' + ', { t: '24', fill: ONES }, ' = ', '144'], left, 498, m('w', 2.0), { size: 64, anchor: 'start' });
+    // "Do not just add the six. One hundred twenty plus six is not it."
+    dText(p, 'Do not just add the 6.', 800, 622, m('not', .17), { size: 42, fill: RED, weight: 700 });
+    dNudge(l2.row[9], m('not', 1.45));                                         // "six"
+    const bad = dMistake(p, ['120 + ', { t: '6', fill: RED }, ' = ', { t: '126', fill: RED }], left + wM / 2, 752, m('not', 2.22), null, { size: 64, strike: [3, 3] });
+    dStrike(bad, m('not', 3.5), RED, [1, 1]);                                  // the 6 that was never multiplied
+  }, { minDur: 10.4 }],
+
+  ['wrap', 'Remember', rememberBeat([['Break apart.', 'w1'], ['Multiply each part.', 'w2'], ['Add.', 'w3']])],
+].map(([id, title, run, extra]) => ({ id, title, run, ...extra }));
+
+boot();
+</script>
+</body>
+</html>

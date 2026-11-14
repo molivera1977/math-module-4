@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Break apart to divide · Math Module 4</title>
+<link rel="stylesheet" href="../lib/engine.css?v=fa68c4a8">
+<link rel="expect" href="#bar" blocking="render">
+</head>
+<body>
+<script src="../lib/engine.js?v=d6885892"></script>
+<script src="../lib/mm4.js?v=1928c069"></script>
+<script src="../lib/embed.js?v=3bc13d2d"></script>
+<script src="audio/en/timings.js?v=31627809"></script>
+<script>
+'use strict';
+/* Mr. O's 4th grade · Math Module 4, Lesson 4.5: mental math, break apart to divide.
+   Drawn the way HIS board notes write it (p6 "Think multiplication", p7 "Break apart to divide: 168 ÷ 4"):
+   the problem, the multiplication fact to think of, then three numbered lines, each written as Ava says it.
+     135 ÷ 3 · Think multiplication: 3 × 40 = 120 · 1  135 = 120 + 15 · 2  (120 ÷ 3) + (15 ÷ 3) · 3  40 + 5 = 45
+   The parts keep ch08's colours: the tens part blue, the ones part green. Nothing he did not use (no bar model).
+   The traps (her words): "Not nine, and not ninety." */
+const CHAPTER = { number: 10, title: 'Break apart to divide', minutes: 1, language: 'en' };
+
+/* HIS BOARD: the problem at the top left, then the lines under it, each step's number in a teal circle */
+const BX = 400, LX = BX + 56, PX = BX - 30;        // the circles' centre, where the lines start, where the problem starts
+const PROB_Y = 128, THINK_Y = 248, L1_Y = 360, L2_Y = 470, PROD_Y = 574, L3_Y = 686, ANS_Y = 806;
+const TENS = GROUP[0], ONES = GROUP[1], TENS_BG = GROUP_BG[0], ONES_BG = GROUP_BG[1];
+
+// a numbered circle like his board's, beside the line at y, popping in as she says "Step n"
+const dBadge = (p, n, y, t0) => {
+  const g = G(p, { x: BX, y: y - 22, o: 0, s: .6 });
+  mk('circle', { cx: 0, cy: 0, r: 30, fill: TEAL }, g);
+  T(g, String(n), { x: 0, y: 12, size: 36, fill: '#ffffff', weight: 700, anchor: 'middle' });
+  tw(g, { o: 1, s: 1 }, t0, .45, back);
+  return g;
+};
+// show pieces ks of a line only at t (the number arrives when the voice says it)
+const later = (line, ks, t) => ks.forEach(k => { put(line.row[k], { o: 0 }); show(line.row[k], t, .4); });
+
+const BEATS = [
+  ['intro', 'Break apart to divide', titleBeat('Lesson 4.5', 'Break apart to divide', 'Divide in your head.')],
+
+  ['steps', 'Three steps', (m) => {
+    const p = panel(0);
+    // "Here is one hundred thirty-five divided by three."
+    const prob = dLine(p, ['135', ' ÷ ', '3'], PX, PROB_Y, .3, { size: 92, card: BLUE_BG, anchor: 'start' });
+    // "Think multiplication. Three times forty is one hundred twenty." (his p6) — the fact, in teal
+    const think = dLine(p, ['Think multiplication: ', '3 × ', '40', ' = ', '120'].map(t => ({ t, fill: TEAL })), LX, THINK_Y, m('think', .15), { size: 56, card: TEAL_BG, anchor: 'start' });
+    later(think, [1], m('think', 2.04));                                       // "Three times"
+    later(think, [2], m('think', 2.77));                                       // "forty"
+    later(think, [3, 4], m('think', 3.4));                                     // "is one hundred twenty"
+    // "Step one. Break it apart. One hundred thirty-five is one hundred twenty plus fifteen."
+    dBadge(p, 1, L1_Y, m('s1', .17));
+    dNudge(prob.row[0], m('s1', 1.6));                                         // "Break it apart"
+    const l1 = dLine(p, ['135', ' = ', { t: '120', fill: TENS }, ' + ', { t: '15', fill: ONES }], LX, L1_Y, m('s1', 2.92), { size: 64, anchor: 'start' });
+    later(l1, [1], m('s1', 4.3));                                              // "is"
+    later(l1, [2], m('s1', 4.5)); dFly(l1, [2], [think.row[4]._px, think.row.y], m('s1', 4.5), .8);   // "one hundred twenty": the fact's 120
+    later(l1, [3], m('s1', 5.6));                                              // "plus"
+    later(l1, [4], m('s1', 5.9));                                              // "fifteen"
+    // "Step two. Divide each part."
+    dBadge(p, 2, L2_Y, m('s2', .17));
+    const l2 = dLine(p, ['(', { t: '120', fill: TENS }, ' ÷ 3)', ' + ', '(', { t: '15', fill: ONES }, ' ÷ 3)'], LX, L2_Y, m('s2', 1.49), { size: 64, anchor: 'start' });
+    // "One hundred twenty divided by three is forty." — written under the 120's part
+    const e0 = dLine(p, [{ t: '120', fill: TENS }, ' ÷ 3 = ', { t: '40', fill: TENS }], LX, PROD_Y, m('s2', 3.16), { size: 56, card: TENS_BG, anchor: 'start' });
+    dNudge(l2.row[1], m('s2', 3.2));                                           // "One hundred twenty"
+    later(e0, [2], m('s2', 5.76));                                             // "forty"
+    // "Fifteen divided by three is five." — beside it, under the 15's part
+    const x1 = LX + e0.row.w + 56 * 1.1 + 40;
+    const e1 = dLine(p, [{ t: '15', fill: ONES }, ' ÷ 3 = ', { t: '5', fill: ONES }], x1, PROD_Y, m('s2b', .2), { size: 56, card: ONES_BG, anchor: 'start' });
+    dNudge(l2.row[5], m('s2b', .25));                                          // "Fifteen"
+    later(e1, [2], m('s2b', 2.15));                                            // "five"
+    // "Step three. Add. Forty plus five is forty-five."
+    dBadge(p, 3, L3_Y, m('s3', .19));
+    dNudge(e0.row[2], m('s3', 1.68)); dNudge(e1.row[2], m('s3', 1.83));       // "Add."
+    const l3 = dLine(p, [{ t: '40', fill: TENS }, ' + ', { t: '5', fill: ONES }, ' = ', '45'], LX, L3_Y, m('s3', 2.54), { size: 64, anchor: 'start' });
+    dFly(l3, [0], [e0.row[2]._px, e0.row.y], m('s3', 2.54), .8);               // "Forty"
+    later(l3, [1], m('s3', 3.19));                                             // "plus"
+    later(l3, [2], m('s3', 3.45)); dFly(l3, [2], [e1.row[2]._px, e1.row.y], m('s3', 3.45), .8);   // "five"
+    later(l3, [3, 4], m('s3', 3.9));                                           // "is forty-five"
+  }],
+
+  ['answer', 'The answer', (m) => {
+    const p = S.panel;
+    // "So one hundred thirty-five divided by three is forty-five." — under his lines, lined up with the problem
+    const ans = dLine(p, ['135 ÷ 3 = ', '45'], PX, ANS_Y, m('a', .2), { size: 68, card: ORANGE_BG, anchor: 'start' });
+    later(ans, [1], m('a', 3.47));
+  }],
+
+  ['mistake', 'Watch out', (m) => {
+    const p = panel(0);
+    dWatchOut(p, .3, 800, 110);
+    // "Forty plus five is forty-five."
+    dRight(p, [{ t: '40', fill: TENS }, ' + ', { t: '5', fill: ONES }, ' = ', '45'], 800, 400, m('w', .2), { size: 80 });
+    // "Not nine, and not ninety."
+    dMistake(p, ['9'], 620, 680, m('not', .15), null, { size: 80 });
+    dMistake(p, ['90'], 980, 680, m('not', 1.4), null, { size: 80 });
+  }, { minDur: 9.0 }],
+
+  ['wrap', 'Remember', rememberBeat([['Break apart.', 'w1'], ['Divide each part.', 'w2'], ['Add.', 'w3']])],
+].map(([id, title, run, extra]) => ({ id, title, run, ...extra }));
+
+boot();
+</script>
+</body>
+</html>

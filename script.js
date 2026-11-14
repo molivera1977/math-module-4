@@ -400,7 +400,18 @@ function hintBoxHTML(hint, shown) {
   return `<div class="hint-box"><button type="button" class="speak-btn hint-speak-btn" ` +
     `title="Read the hint aloud" aria-label="Read the hint aloud" ` +
     `onclick="event.stopPropagation(); speakHint(this)">🔊</button>` +
-    `<span class="hint-text"><span aria-hidden="true">💡</span> ${words}</span></div>`;
+    `<span class="hint-text"><span aria-hidden="true">💡</span> ${words}</span>${videoBtnHTML('hint', '🎬 Show me')}</div>`;
+}
+// what the Warm-Up's video card says when a part was jumped over (read aloud; recorded with the other lines)
+const VIDEO_SKIPPED = 'You skipped a part. Press Play. Watch it all.';
+window.MM4_VIDEO_SAYS = ['Press Play. Watch the video to the end.', 'Press Play to watch.', VIDEO_SKIPPED];
+/* 🎬 Show me (beside the hint) / 🎬 Watch how (after a miss): the video for this kind of question (Marcos 11/13).
+   Practice only (MM4Video.forQuestion); never plays on its own; no glow — it is help, not a step (Marcos 11/4). */
+function videoBtnHTML(why, label) {
+  const ch = window.MM4Video && typeof app !== 'undefined' ? MM4Video.forQuestion(app.currentQ(), app.currentForm) : null;
+  if (!ch) return '';
+  return `<button type="button" class="video-show-btn" data-why="${why}" aria-expanded="false" ` +
+    `onclick="event.stopPropagation(); app.showVideo('${why}', this)">${label}</button>`;
 }
 
 function speakHint(btn) {
@@ -1759,6 +1770,8 @@ const app = {
   renderQuestion() {
     if (TEACH) this._teachSync();   // 👀 Try it as a student: the bar's menu follows the run
     this._readOpen = null; this._gateOpen = null;
+    if (window.MM4Video) MM4Video.close();   // 🎬 a video belongs to its question: going on stops it
+    document.getElementById('question-text').classList.remove('vid-wait');
     setPartBanner(this.currentForm);
     const q     = this.currentQ();
     const total = this.currentBank.length;
@@ -1877,9 +1890,66 @@ const app = {
     }
   },
 
-  /* 👀 WATCH (Warm-Up): a worked example. No choices. The student must hear it to the end
-     (the same Listen as after a miss), then Next shows. Not scored. */
+  /* 🎬 WATCH (Warm-Up) = THE LESSON VIDEO (Marcos 11/13, his pick: "Video replaces it"). No choices. The direction
+     ("Press Play. Watch the video to the end.") is read first; the video's Play pulses; Next shows when the video has
+     played to its end with no part jumped over (logged as heard · how 'video'). The teacher's ⏩ skips the wait as
+     before. A video that does not load → the read-aloud worked example below, for the rest of this visit. */
   _renderWatch(q, total) {
+    const ch = window.MM4Video ? MM4Video.forWatch(q) : null;
+    if (!ch || this._videoFailed) { this._renderWatchText(q, total); return; }
+    document.getElementById('twin-note').classList.add('hidden');
+    document.getElementById('score-text').textContent = `${getFirstName(this.studentName)} · ${this.score}`;
+    document.getElementById('progress-fill').style.width = `${(this.currentIndex / total) * 100}%`;
+    this._renderStreak();
+    document.getElementById('question-text').innerHTML = `<span class="watch-tag">🎬 Watch the video</span> ${formatMathText(q.title)}`;
+    document.getElementById('speak-q-btn').classList.add('hidden');
+    document.getElementById('q-visual').innerHTML = '';
+    document.getElementById('q-words').innerHTML = '';
+    document.getElementById('answers').innerHTML = '';
+    ['confirm-btn', 'next-btn', 'next-timer-bar', 'reading-timer-bar'].forEach(id => document.getElementById(id).classList.add('hidden'));
+    this.selectedAnswer = null; this.questionLocked = false; this.hintShown = false; this.wordOpen = null;
+    const fb = document.getElementById('feedback');
+    fb.className = 'feedback-box teach-box video-box';
+    fb.style.display = 'block';
+    fb.innerHTML = '';
+    this.soakDone = true;                       // no pause here: watching it to the end is the wait
+    this.mustHear = !reviewMode;
+    if (!this.mustHear) this.questionLocked = true;
+    // the notes go in the direction row above the video (Web Design Expert 11/13: under it they were below the fold, small and
+    // silent); a correction is a direction, so it is read aloud (THE STANDARD 10/27); "Done" is a success line, not read
+    const say = (text, read) => {
+      const n = document.getElementById('video-note'); if (!n) return;
+      n.textContent = text;
+      if (read) speakDir(n.parentElement.querySelector('.speak-btn'));
+    };
+    const heard = how => {
+      if (!this.mustHear) return;
+      this._gateOpen = null;
+      this.mustHear = false;
+      this.questionLocked = true;
+      logEvent('heard', { id: q.id, how });     // how: 'video' (watched to the end) or 'skip' (the teacher's ⏩)
+      say('✅ Done. You can go on.');
+      this.saveProgress();
+      this._maybeShowNext();
+    };
+    MM4Video.mount(fb, ch, {
+      why: 'watch', qid: q.id, must: this.mustHear, dir: 'Press Play. Watch the video to the end.',
+      onDone: full => { if (full) heard('video'); else if (this.mustHear) say(VIDEO_SKIPPED, true); },
+      onFail: () => { this._videoFailed = true; this._renderWatchText(q, total); },
+    });
+    const dirText = fb.querySelector('.video-dir .dir-text');
+    if (dirText) { dirText.id = 'video-note'; dirText.setAttribute('aria-live', 'polite'); }
+    this._gateOpen = () => heard('skip');       // 🧑‍🏫 ⏩ Skip the wait
+    this.saveProgress();
+    if (reviewMode) {
+      document.getElementById('next-btn').classList.remove('hidden');
+      if (reviewAutoRun) setTimeout(() => this.nextQuestion(), 1200);
+    }
+  },
+
+  /* 👀 WATCH, READ ALOUD (the worked example before the videos; now only when a video does not load): no choices,
+     the student must hear it to the end (the same Listen as after a miss), then Next shows. Not scored. */
+  _renderWatchText(q, total) {
     document.getElementById('twin-note').classList.add('hidden');
     document.getElementById('score-text').textContent = `${getFirstName(this.studentName)} · ${this.score}`;
     document.getElementById('progress-fill').style.width = `${(this.currentIndex / total) * 100}%`;
@@ -2106,10 +2176,18 @@ const app = {
 
     // After a miss the student must HEAR the mistake and the right answer before Next shows
     this.mustHear = teach && !correct && !reviewMode;
-    if (this.mustHear) this._armListen(fb, fbSpeakBtn, fbSpans, spokenFb, q.id);
+    // 🎬 Watch how waits until the correction has been heard (Web Design Expert 11/13: opening a video read its direction,
+    // which cut the Listen off and scrolled it away — no Next, no Listen in sight)
+    if (this.mustHear) this._armListen(fb, fbSpeakBtn, fbSpans, spokenFb, q.id, () => {
+      const offer = fb.querySelector('.video-offer'); if (offer) offer.hidden = false;
+      document.getElementById('question-text').classList.remove('vid-wait');
+    });
+    document.getElementById('question-text').classList.toggle('vid-wait', !!this.mustHear);
 
     // Review: show the worked pictures (bar model · rectangle · columns)
     if (teach) fb.insertAdjacentHTML('beforeend', M2V.explainHTML(q.explain));
+    // 🎬 Watch how: the video for this kind of question, under the mistake (Practice, Marcos 11/13)
+    if (teach && !correct) { const b = videoBtnHTML('miss', '🎬 Watch how'); if (b) fb.insertAdjacentHTML('beforeend', `<div class="video-offer"${this.mustHear ? ' hidden' : ''}>${b}</div>`); }
 
     document.getElementById('confirm-btn').classList.add('hidden');
     document.getElementById('score-text').textContent = `${getFirstName(this.studentName)} · ${this.score}`;
@@ -2235,6 +2313,19 @@ const app = {
     this._renderWords();
     const focus = document.querySelector(opening ? '#q-words .word-speak-btn' : `#q-words .word-chip`);
     if (focus) focus.focus();
+  },
+
+  /* 🎬 open (or close) this question's video: beside the hint → under the question; after a miss → under the mistake */
+  showVideo(why, btn) {
+    const q = this.currentQ();
+    const ch = window.MM4Video && MM4Video.forQuestion(q, this.currentForm);
+    if (!ch) return;
+    const cur = MM4Video.current();
+    if (cur && cur.why === why) { MM4Video.close(); return; }
+    if (this.mustHear) return;                  // a Listen is owed first (its voice must not be cut off)
+    const host = document.getElementById(why === 'miss' ? 'video-host-miss' : 'video-host');   // outside the red feedback box
+    MM4Video.mount(host, ch, { why, qid: q.id, closable: true, dir: 'Press Play to watch.' });
+    if (btn) btn.setAttribute('aria-expanded', 'true');
   },
 
   /* ── SPEAK QUESTION ── */

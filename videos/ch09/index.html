@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Change the order · Math Module 4</title>
+<link rel="stylesheet" href="../lib/engine.css?v=fa68c4a8">
+<link rel="expect" href="#bar" blocking="render">
+</head>
+<body>
+<script src="../lib/engine.js?v=d6885892"></script>
+<script src="../lib/mm4.js?v=1928c069"></script>
+<script src="../lib/embed.js?v=3bc13d2d"></script>
+<script src="audio/en/timings.js?v=21b35fb8"></script>
+<script>
+'use strict';
+/* Mr. O's 4th grade · Math Module 4, Lesson 4.5: mental math, change the order to find a friendly pair.
+   Drawn the way HIS board notes and classwork write it (board notes p2 "Change the order: 5 × 9 × 2"; classwork
+   Part 1: "Find the friendly pair. It makes 10, 100, 200, or 300." · "Same numbers, new order. The answer does not change."):
+   number tiles, the pair swaps together, then his two numbered lines.
+     5 × 8 × 2 · 1  Friendly pair: 5 × 2 = 10 · 2  10 × 8 = 80
+     4 × 7 × 50 · 1  Friendly pair: 4 × 50 = 200 · 2  200 × 7 = 1,400
+   The trap (her words): "Do not add them." 4 + 7 + 50 = 61. */
+const CHAPTER = { number: 9, title: 'Change the order', minutes: 1, language: 'en' };
+
+/* NUMBER TILES: three rounded squares in a row with × signs between them */
+const TILE = 150, TILE_Y = 250, SLOTS = [500, 800, 1100];
+const DEF_Y = 462;                                // his sentence: what a friendly pair makes
+/* HIS BOARD: numbered lines under the problem, each number in a teal circle */
+const BX = 410, LX = BX + 76, L1_Y = 596, L2_Y = 736;
+
+// one tile around its own centre, hidden until t0 (g._r = the square, recoloured when it joins a friendly pair)
+const dTile = (p, str, x, t0) => {
+  const g = G(p, { x, y: TILE_Y, o: 0 });
+  g._r = put(mk('rect', { x: -TILE / 2, y: -TILE / 2, width: TILE, height: TILE, rx: 30, fill: BLUE_BG, stroke: BLUE, 'stroke-width': 4 }, g),
+    { c_fill: BLUE_BG, c_stroke: BLUE });
+  M(g, [str], { size: 96, y: 34, fill: INK });
+  show(g, t0, .4);
+  return g;
+};
+// the problem a × b × c as tiles
+const dTiles = (p, nums, t0) => {
+  [650, 950].forEach(x => dText(p, '×', x, TILE_Y + 28, t0, { size: 80, fill: INK, weight: 500 }));
+  return nums.map((n, k) => dTile(p, n, SLOTS[k], t0 + k * .12));
+};
+// two tiles trade places: a hops over the top from xa to xb, b dips under from xb to xa
+const swap = (a, b, xa, xb, t0, dur = .9, lift = 100) => {
+  prog(q => put(a, { x: xa + (xb - xa) * q, y: TILE_Y - Math.sin(Math.PI * q) * lift }), t0, dur);
+  prog(q => put(b, { x: xb + (xa - xb) * q, y: TILE_Y + Math.sin(Math.PI * q) * lift }), t0, dur);
+};
+// the teal bracket over the first two tiles: "friendly pair"; the two tiles turn teal
+const dPair = (p, tiles, t0) => {
+  const y = TILE_Y - TILE / 2 - 26, x1 = SLOTS[0] - TILE / 2 + 8, x2 = SLOTS[1] + TILE / 2 - 8;
+  draw(path(p, `M${x1} ${y + 16}V${y}H${x2}V${y + 16}`, { stroke: TEAL, 'stroke-width': 6 }, { d: 0 }), t0, .5);
+  dText(p, 'friendly pair', (SLOTS[0] + SLOTS[1]) / 2, y - 22, t0 + .3, { size: 38, fill: TEAL, weight: 800 });
+  tiles.forEach(e => tw(e._r, { c_fill: TEAL_BG, c_stroke: TEAL }, t0 + .1, .5));
+};
+// a numbered circle like his board's, beside the line at y, popping in with the line
+const dBadge = (p, n, y, t0) => {
+  const g = G(p, { x: BX, y: y - 22, o: 0, s: .6 });
+  mk('circle', { cx: 0, cy: 0, r: 30, fill: TEAL }, g);
+  T(g, String(n), { x: 0, y: 12, size: 36, fill: '#ffffff', weight: 700, anchor: 'middle' });
+  tw(g, { o: 1, s: 1 }, t0, .45, back);
+  return g;
+};
+/* his two lines for a × b × c with the pair a × c:  1  Friendly pair: a × c = ac · 2  ac × b = abc
+   ts: { fact, prod, name, then, ans } = when "a × c =", its product, "Friendly pair:", line 2 and its answer show */
+const dPairLines = (p, a, c, ac, b, abc, ts) => {
+  dBadge(p, 1, L1_Y, ts.fact);
+  const l1 = dLine(p, [{ t: 'Friendly pair: ', fill: TEAL }, { t: `${a} × ${c} = `, fill: TEAL }, { t: ac, fill: TEAL }], LX, L1_Y, ts.fact, { size: 60, anchor: 'start' });
+  later(l1, [2], ts.prod);
+  // "That is the friendly pair.": the product slides over and his words "Friendly pair:" come in before it
+  const w0 = l1.row[0]._w;
+  [1, 2].forEach(k => { put(l1.row[k], { x: l1.row[k]._px - w0 }); tw(l1.row[k], { x: l1.row[k]._px }, ts.name, .6); });
+  later(l1, [0], ts.name + .25);
+  dBadge(p, 2, L2_Y, ts.then);
+  const l2 = dLine(p, [{ t: ac, fill: TEAL }, ` × ${b} = `, abc], LX, L2_Y, ts.then, { size: 64, card: ORANGE_BG, anchor: 'start' });
+  dFly(l2, [0], [l1.row[2]._px, l1.row.y], ts.then + .05, .8);                // the pair's product comes down
+  later(l2, [2], ts.ans);
+  return [l1, l2];
+};
+// show pieces ks of a line only at t (the number arrives when the voice says it)
+const later = (line, ks, t) => ks.forEach(k => { put(line.row[k], { o: 0 }); show(line.row[k], t, .4); });
+// a sentence whose words arrive with the voice: pieces [[str, t0], …] side by side, the whole centred on x
+const dSay = (p, pieces, x, y, { size = 40, fill = INK, weight = 600 } = {}) => {
+  ctx2d.font = `${weight} ${size}px ${UI}`;
+  const ws = pieces.map(([str]) => ctx2d.measureText(str).width);
+  let cx = x - ws.reduce((a, b) => a + b, 0) / 2;
+  return pieces.map(([str, t0], k) => { const e = dText(p, str, cx, y, t0, { size, fill, weight, anchor: 'start' }); cx += ws[k]; return e; });
+};
+
+const BEATS = [
+  ['intro', 'Change the order', titleBeat('Lesson 4.5', 'Change the order', 'Find the friendly pair.')],
+
+  ['pair', 'A friendly pair', (m) => {
+    const p = panel(0);
+    const [t5, t8, t2] = dTiles(p, ['5', '8', '2'], .3);                      // "Here is five times eight times two."
+    // "A friendly pair makes ten, one hundred, two hundred, or three hundred." — his classwork's sentence
+    dSay(p, [['A friendly pair makes ', m('def')], ['10, ', m('def', 1.5)], ['100, ', m('def', 2.36)],
+      ['200, ', m('def', 3.61)], ['or ', m('def', 4.64)], ['300.', m('def', 5.07)]], 800, DEF_Y, { size: 42 });
+    // "Five times two is ten.": the 2 hops over by the 5
+    dNudge(t5, m('pair', .22));                                                // "Five"
+    swap(t2, t8, SLOTS[2], SLOTS[1], m('pair', .5));                           // "times two"
+    dPairLines(p, '5', '2', '10', '8', '80', {
+      fact: m('pair', .5), prod: m('pair', 1.2),                               // "Five times two" · "is ten"
+      name: m('pair', 2.95),                                                   // "That is the friendly pair."
+      then: m('then', .15), ans: m('then', 1.45) });                           // "Ten times eight" · "is eighty"
+    dPair(p, [t5, t2], m('pair', 2.95));
+    dNudge(t8, m('then', .9));                                                 // "eight"
+  }],
+
+  ['same', 'Same answer', (m) => {
+    const p = panel(0);
+    dText(p, 'Same numbers, new order.', 800, 170, m('same'), { size: 48, fill: INK, weight: 700 });
+    const a = dLine(p, ['5', ' × ', '8', ' × ', '2', ' = ', '80'], 760, 360, .3, { size: 84 });
+    const b = dLine(p, [{ t: '5', fill: TEAL }, ' × ', '8', ' × ', { t: '2', fill: TEAL }, ' = ', '80'], 760, 540, .55, { size: 84 });
+    // "new order": in the second line the 8 and the 2 trade places, so 5 × 2 sit together
+    const [x8, x2] = [b.row[2]._px, b.row[4]._px];
+    prog(q => { put(b.row[4], { x: x2 + (x8 - x2) * q, y: b.row.y - Math.sin(Math.PI * q) * 70 }); put(b.row[2], { x: x8 + (x2 - x8) * q, y: b.row.y + Math.sin(Math.PI * q) * 70 }); }, m('same', 1.17), .8);
+    // "The answer does not change."
+    dText(p, 'The answer does not change.', 800, 720, m('same2'), { size: 48, fill: INK, weight: 700 });
+    [a, b].forEach((l, k) => {
+      const last = l.row[l.row.length - 1];
+      dNudge(last, m('same2', .5));                                            // "answer"
+      dTick(p, last._px + last._w / 2 + 64, l.row.y - 28, m('same2', 1.0 + k * .3));
+    });
+  }],
+
+  ['zeros', 'Another friendly pair', (m) => {
+    const p = panel(0);
+    const [t4, t7, t50] = dTiles(p, ['4', '7', '50'], .3);                    // "Here is four times seven times fifty."
+    // "Four times fifty is two hundred.": the 50 hops over by the 4
+    dNudge(t4, m('pair', .2));                                                 // "Four"
+    swap(t50, t7, SLOTS[2], SLOTS[1], m('pair', .45));                         // "times fifty"
+    dPairLines(p, '4', '50', '200', '7', '1,400', {
+      fact: m('pair', .45), prod: m('pair', 1.67),                             // "Four times fifty" · "is two hundred"
+      name: m('pair', 3.45),                                                   // "That is the friendly pair."
+      then: m('then', .17), ans: m('then', 1.65) });                           // "Two hundred times seven" · "is one thousand, four hundred"
+    dPair(p, [t4, t50], m('pair', 3.45));
+    dNudge(t7, m('then', 1.05));                                               // "seven"
+  }],
+
+  ['mistake', 'Watch out', (m) => {
+    const p = panel(0);
+    dWatchOut(p, .3, 800, 100);
+    // "Multiply all three numbers." — the right answer, each number nudged as she says "all three numbers"
+    const ok = dRight(p, ['4', ' × ', '7', ' × ', '50', ' = 1,400'], 760, 370, m('w'), { size: 72 });
+    [0, 2, 4].forEach((k, n) => dNudge(ok.row[k], m('w', .7 + n * .38)));
+    // "Do not add them."
+    dMistake(p, ['4 + 7 + 50 = 61'], 760, 640, m('not', .15), 'Do not add them.', { size: 72 });
+  }, { minDur: 7.6 }],
+
+  ['wrap', 'Remember', rememberBeat([['Find the friendly pair.', 'w1'], ['Multiply it first.', 'w2'], ['Then multiply by the last number.', 'w3']])],
+].map(([id, title, run, extra]) => ({ id, title, run, ...extra }));
+
+boot();
+</script>
+</body>
+</html>

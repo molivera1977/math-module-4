@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estimate a quotient · Math Module 4</title>
+<link rel="stylesheet" href="../lib/engine.css?v=fa68c4a8">
+<link rel="expect" href="#bar" blocking="render">
+</head>
+<body>
+<script src="../lib/engine.js?v=d6885892"></script>
+<script src="../lib/mm4.js?v=1928c069"></script>
+<script src="../lib/embed.js?v=3bc13d2d"></script>
+<script src="audio/en/timings.js?v=841bf8a3"></script>
+<script>
+'use strict';
+/* Mr. O's 4th grade · Math Module 4, Lesson 4.4 (4.NBT.6): estimate a quotient. Drawn like HIS board notes, page 9
+   ("Estimate a quotient: 213 ÷ 7 · 1 First 2 digits: 21 · 2 Close fact: 21 ÷ 7 = 3 · 3 Zeros back: 210 ÷ 7 = 30"),
+   page 8 ("Compatible numbers = easy to divide") and page 10 ("Find a fact, not just a round number: 2,000 ÷ 6 → no
+   fact (hard) · 2,400 ÷ 6 = 400 (easy)"): 334 ÷ 4 · 1 First 2 digits: 33 · 2 Close fact: 32 ÷ 4 = 8 · 3 Zeros back:
+   320 ÷ 4 = 80, so 334 ÷ 4 is about 80. The trap, his page 10: 300 ÷ 4 → no fact (hard); 320 ÷ 4 = 80 (easy).
+   Nothing he did not use (no facts list, no number line, no "closest"); the site's questions (280 ÷ 4, 360 ÷ 4) are
+   never shown. Every number appears on the word that says it (offsets from the marks, read off
+   narration.en.timings.json). */
+const CHAPTER = { number: 7, title: 'Estimate a quotient', minutes: 1, language: 'en' };
+
+const WHITE = '#ffffff', EDGE = '#d3dde0';
+// a piece that waits for its word: hidden, then faded in at t
+const later = (e, t, dur = .35) => { put(e, { o: 0 }); show(e, t, dur); return e; };
+// a line in ink whose pieces come in on their words (times[k] for piece k). A dRight card with the same pieces lands
+// on top of it later, so the claim is on screen as she says it and turns orange when she judges it.
+const sayLine = (p, items, x, y, times, size) => {
+  const ln = dLine(p, items, x, y, times[0], { size });
+  ln.row.forEach((e, k) => { if (k) later(e, times[k]); });
+  return ln;
+};
+// HIS BOARD: the white panel with a thin gray edge that his notes are written on
+const boardCard = (p, x, y, w, h, t0) => {
+  const r = mk('rect', { x, y, width: w, height: h, rx: 26, fill: WHITE, stroke: EDGE, 'stroke-width': 3 }, p);
+  put(r, { o: 0 }); show(r, t0, .5);
+  return r;
+};
+
+/* HIS NUMBERED STEPS (board notes p9): a numbered circle, then the step written in a row. The circle comes on
+   "Step one", the row's pieces on their words. Returns the dLine (row). */
+const STEP_X = 300, STEP_SIZE = 60;
+const stepNum = (p, n, y, t0) => {
+  const g = G(p, { x: STEP_X, y: y - STEP_SIZE * .32, o: 0, s: .5 });
+  mk('circle', { cx: 0, cy: 0, r: 32, fill: BLUE }, g);
+  T(g, String(n), { x: 0, y: 13, size: 38, fill: WHITE, weight: 800, anchor: 'middle' });
+  tw(g, { o: 1, s: 1 }, t0, .45, back);
+  return g;
+};
+const stepRow = (p, items, y, times) => {
+  const ln = dLine(p, items, STEP_X + 58, y, times[0], { size: STEP_SIZE, anchor: 'start' });
+  ln.row.forEach((e, k) => { if (k) later(e, times[k]); });
+  return ln;
+};
+// underlined in teal: under pieces i..j of a row, drawn on at t0
+const underline = (ln, i, j, t0, color = TEAL) => {
+  const row = ln.row, a = row[i]._px - row[i]._w / 2, b = row[j]._px + row[j]._w / 2, y = row.y + row.size * .2;
+  const e = path(ln, `M${a} ${y}H${b}`, { stroke: color, 'stroke-width': 6, fill: 'none' }, { d: 0 });
+  draw(e, t0, .45);
+  return e;
+};
+// a piece of a line that turns teal at t0: a teal copy fades in over it as the ink one fades out
+const turnTeal = (ln, k, t0) => {
+  const e = ln.row[k], str = e.textContent;
+  const c = M(ln, [str], { x: e._px, y: ln.row.y, size: ln.row.size, fill: TEAL, o: 0 });
+  show(c, t0, .3); hide(e, t0, .3);
+  return c;
+};
+
+const BEATS = [
+  ['intro', 'Estimate a quotient', titleBeat('Lesson 4.4', 'Estimate a quotient', 'Compatible numbers are easy to divide.')],
+
+  ['steps', 'First 2 digits, close fact, zeros back', (m) => {
+    const p = panel(0);
+    // "Here is three hundred thirty-four divided by four."
+    const prob = dLine(p, ['33', '4', ' ÷ 4'], 800, 140, .3, { size: 84, card: BLUE_BG });
+    prob.row.forEach(e => dNudge(e, .7));                                                   // "three hundred thirty-four"
+    boardCard(p, 200, 210, 1200, 445, .3);
+    // "Step one. Look at the first two digits. Thirty-three."
+    stepNum(p, 1, 300, m('s1'));
+    stepRow(p, ['First 2 digits: ', { t: '33', fill: TEAL }], 300, [m('s1', 1.36), m('s1', 3.79)]);
+    turnTeal(prob, 0, m('s1', 3.79));                                                       // the 33 of 334
+    underline(prob, 0, 0, m('s1', 3.79));
+    // "Step two. Find a close fact. Thirty-two divided by four is eight."
+    stepNum(p, 2, 445, m('s2'));
+    const r2 = stepRow(p, ['Close fact: ', ...['32', ' ÷ ', '4', ' = ', '8'].map(t => ({ t, fill: TEAL }))], 445,
+      [m('s2', 1.31), m('s2', 3.11), m('s2', 3.91), m('s2', 4.66), m('s2', 5.04), m('s2', 5.27)]);
+    underline(r2, 1, 5, m('s2', 5.6));
+    // "Step three. Put the zero back. Three hundred twenty divided by four is eighty."
+    stepNum(p, 3, 590, m('s3'));
+    S.r3 = stepRow(p, ['Zeros back: ', { t: '32', fill: TEAL }, { t: '0', fill: ORANGE }, ' ÷ ', '4', ' = ',
+      { t: '8', fill: TEAL }, { t: '0', fill: ORANGE }], 590,
+      [m('s3', 1.51), m('s3', 3.17), m('s3', 3.17), m('s3', 4.55), m('s3', 5.33), m('s3', 5.77), m('s3', 5.99), m('s3', 5.99)]);
+  }],
+
+  ['answer', 'About 80', (m) => {
+    const p = S.panel;
+    // "So three hundred thirty-four divided by four is about eighty."
+    const ab = dLine(p, ['334', ' ÷ 4', ' is about ', '80'], 800, 775, m('a', .61), { size: 76, card: ORANGE_BG });
+    later(ab.row[1], m('a', 2.09)); later(ab.row[2], m('a', 3.27)); later(ab.row[3], m('a', 3.74));
+    [6, 7].forEach(k => dNudge(S.r3.row[k], m('a', 3.74)));
+  }],
+
+  ['mistake', 'Watch out', (m) => {
+    const p = panel(0);
+    dWatchOut(p, .3, 800, 95);
+    dLine(p, ['334 ÷ 4'], 800, 215, .3, { size: 72, card: BLUE_BG });
+    dText(p, 'Find a fact, not just a round number.', 800, 345, m('w'), { size: 50, fill: INK, weight: 700 });   // her words
+    // "Three hundred divided by four has no fact. That is hard."
+    const no = dLine(p, ['300', ' ÷ ', '4', '  →  no fact', ' (hard)'].map(t => ({ t, fill: RED })), 800, 505, m('no'), { size: 64, card: RED_BG });
+    later(no.row[1], m('no', .78)); later(no.row[2], m('no', 1.58)); later(no.row[3], m('no', 2.29)); later(no.row[4], m('no', 3.88));
+    // "Three hundred twenty divided by four is easy."
+    const ok = [[{ t: '32', fill: TEAL }, { t: '0', fill: ORANGE }, ' ÷ ', '4', ' = ', { t: '8', fill: TEAL }, { t: '0', fill: ORANGE }, ' (easy)'], 800, 680];
+    sayLine(p, ...ok, [m('ok'), m('ok'), m('ok', 1.39), m('ok', 2.17), m('ok', 2.64), m('ok', 2.64), m('ok', 2.64), m('ok', 2.87)], 64);
+    dRight(p, ...ok, m('ok', 2.87), { size: 64 });
+  }, { minDur: 15.4 }],                                                                      // the finished picture holds 2.5 s
+
+  ['wrap', 'Remember', rememberBeat([['Look at the first two digits.', 'w1'], ['Find a close fact.', 'w2'], ['Put the zeros back.', 'w3']])],
+].map(([id, title, run, extra]) => ({ id, title, run, ...extra }));
+
+boot();
+</script>
+</body>
+</html>
