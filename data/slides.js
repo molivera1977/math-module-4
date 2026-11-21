@@ -9,5 +9,5 @@ window.SLIDES = [
   {"id":"S3","title":"Estimate a product","steps":["3 × 642","642 is between 600 and 700.","3 × 600 = 1,800. 3 × 700 = 2,100. The product is between 1,800 and 2,100."],"pic":{"work":["3 × 600 = 1,800","3 × 700 = 2,100"]}},
   {"id":"S4","title":"Estimate a quotient","steps":["347 ÷ 5","Compatible number: 350. 35 ÷ 5 is a fact.","350 ÷ 5 = 70. 347 ÷ 5 is about 70."],"pic":{"work":["347 is close to 350","350 ÷ 5 = 70"]}},
   {"id":"S5","title":"Mental math: break apart","steps":["7 × 23","(7 × 20) + (7 × 3)","140 + 21 = 161."],"pic":{"work":["(7 × 20) + (7 × 3)","140 + 21 = 161"]}},
-  {"id":"S6","title":"Mental math: change the order","steps":["2 × 8 × 50","Friendly pair: 2 × 50 = 100.","100 × 8 = 800."],"pic":{"work":["2 × 50 = 100","100 × 8 = 800"]}}
+  {"id":"S6","title":"Mental math: change the order","steps":["40 × 9 × 5","Friendly pair: 40 × 5 = 200.","200 × 9 = 1,800."],"pic":{"work":["40 × 5 = 200","200 × 9 = 1,800"]}}
 ];
