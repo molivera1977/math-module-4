@@ -109,6 +109,24 @@ window.SKILLS = {
  "Y13": "Mental math: change the order",
  "Y14": "Divide with zeros",
  "Y15": "Mental math: break apart to multiply",
- "Y16": "Estimate a product: round, then multiply"
+ "Y16": "Estimate a product: round, then multiply",
+ "J01": "Multiply with zeros: a pattern",
+ "J03": "Divide with zeros",
+ "J04": "Estimate a product: two estimates",
+ "J05": "Estimate a quotient: compatible numbers",
+ "J06": "Mental math: break apart to multiply",
+ "J07": "Mental math: change the order",
+ "J08": "Divide with zeros",
+ "J10": "Division patterns",
+ "J11": "Multiply with zeros",
+ "K01": "Multiply with zeros: a pattern",
+ "K03": "Divide with zeros",
+ "K04": "Estimate a product: two estimates",
+ "K05": "Estimate a quotient: compatible numbers",
+ "K06": "Mental math: break apart to multiply",
+ "K07": "Mental math: change the order",
+ "K08": "Divide with zeros",
+ "K10": "Division patterns",
+ "K11": "Multiply with zeros"
 };
 window.SKILL_STANDARDS = {"Multiply with zeros: a pattern":"4.NBT.5","Divide with zeros":"4.NBT.6","Estimate a product: two estimates":"4.NBT.5","Estimate a quotient: compatible numbers":"4.NBT.6","Mental math: break apart to multiply":"4.NBT.5","Mental math: change the order":"4.NBT.5","Mental math: break apart to divide":"4.NBT.6","Division patterns":"4.NBT.6","Multiply with zeros":"4.NBT.5","Estimate a product: round, then multiply":"4.NBT.5"};
