@@ -102,6 +102,11 @@ const TWINS = { P: 'X', B: 'Y' };   // X after a Practice miss (hints), Y after 
 // After a miss, the extra questions of the same kind, in order. The Warm-Up gets TWO (Marcos 11/22: "Every wrong answer should
 // get 2 follow ups in warm up especially…" → "fix Warm Up for MM4"): J, then K — new numbers in each Warm-Up version.
 const FOLLOW_UPS = { W: ['J', 'K'], P: [TWINS.P], B: [TWINS.B] };
+// HALF A POINT BACK (Marcos 11/23: "Half point each" · "Holding them back in Warm Up does nothing for anyone"): on the
+// Warm-Up, each extra question answered right wins back half a point of the question missed (both right = the whole point).
+// The Practice's and the Review's one extra question stay practice only. 6½ of 9 = 72% passes (PASS_PCT 70).
+const HALF_BACK = { W: true };
+const showScore = v => { const n = Number(v) || 0, w = Math.floor(n); return n === w ? String(w) : `${w || ''}½`; };
 const FORM_NAMES = { W: 'Warm-Up', P: 'Practice', B: 'Review', T: 'Test', U: 'Test (Retake)' };
 function formOpen(form) {
   return SHARE_MODE || (isWarmUp(form) ? WARM_UP_OPEN : isPractice(form) ? PRACTICE_A_OPEN : form === 'B' ? REVIEW_OPEN : TEST_OPEN && atSchoolNow());
@@ -642,7 +647,8 @@ function passed(name, form) {
 }
 /* How many right it takes: 70% of 16 questions = 12 (Warm-Up: 70% of 9 = 7) */
 function needFor(form) {
-  return Math.ceil(PASS_PCT / 100 * scoredCount(window['FORM_' + form]));
+  const step = HALF_BACK[form] ? 0.5 : 1;   // the Warm-Up counts half points: 70% of 9 = 6½
+  return Math.ceil(PASS_PCT / 100 * scoredCount(window['FORM_' + form]) / step - 1e-9) * step;
 }
 /* THE PRE-WARM-UP (Marcos 11/6: "how about a pre-warmup for just those students"): it appears once a student has
    finished a Warm-Up. A student whose Warm-Ups are all below the mark must finish the Pre-Warm-Up once before the
@@ -659,7 +665,7 @@ function practiceAWait(name) {
   if (ANY_ORDER || SHARE_MODE || passed(name, 'P')) return '';
   const a = getFormAttempts(name);
   if (!a.W) return 'Finish the Warm-Up first';
-  if (!passed(name, 'W')) return `Get ${needFor('W')} of ${scoredCount(window.FORM_W)} on the Warm-Up first`;
+  if (!passed(name, 'W')) return `Get ${showScore(needFor('W'))} of ${scoredCount(window.FORM_W)} on the Warm-Up first`;
   return '';
 }
 /* (Module 4 has no Practice B.) Why Practice B is not open for this student yet ('' = it is open).
@@ -706,8 +712,8 @@ function applyFormLocks(name) {
   const bestW = bestScore(name, 'W'), nW = scoredCount(window.FORM_W);
   setFormButton('W', '🔥 Warm-Up',
     !bestW ? `watch, then try · ${nW} questions · 💡 hints`
-    : passed(name, 'W') ? `✅ Best: ${bestW.score} of ${bestW.total} · do it again any time`
-    : `🔁 Best: ${bestW.score} of ${bestW.total} · get ${needFor('W')} to open the Practice`,
+    : passed(name, 'W') ? `✅ Best: ${showScore(bestW.score)} of ${bestW.total} · do it again any time`
+    : `🔁 Best: ${showScore(bestW.score)} of ${bestW.total} · get ${showScore(needFor('W'))} to open the Practice`,
     warmUpWait(name));
   // Practice A: waits for 70% on the Warm-Up; no limit. After a try the button shows the best score and what opens Practice B.
   const bestA = bestScore(name, 'P');
@@ -742,11 +748,11 @@ function applyFormLocks(name) {
 }
 
 /* ── SPEAK DIRECTIONS ───────────────────────────────── */
-function speakDir(btn) {
+function speakDir(btn, onDone) {
   if (activeSpeakBtn === btn) { stopActiveSpeech(); return; }
   stopActiveSpeech();
 
-  const p = btn.closest('.dir-section').querySelector('.dir-text');
+  const p = btn.closest('.dir-section, .twin-note').querySelector('.dir-text');
   if (!p) return;
   if (!p.querySelector('.wrd')) p.innerHTML = wrapWords(p.innerHTML);
 
@@ -767,7 +773,7 @@ function speakDir(btn) {
   };
   u.onend = () => {
     document.querySelectorAll('.dir-text .wrd.hl').forEach(el => el.classList.remove('hl'));
-    if (activeSpeakBtn === btn) { btn.textContent = '🔊'; activeSpeakBtn = null; }
+    if (activeSpeakBtn === btn) { btn.textContent = '🔊'; activeSpeakBtn = null; if (onDone) onDone(); }
   };
   addHighlightFallback(u, spans);
   window.speechSynthesis.speak(u);
@@ -1808,9 +1814,15 @@ const app = {
     // "Try one like it" strip: shown only while a twin question is up
     const twinNote = document.getElementById('twin-note');
     if (twinNote) twinNote.classList.toggle('hidden', !this.twin);
-    const twinCount = document.getElementById('twin-count');   // the Warm-Up's two: "(1 of 2)", "(2 of 2)"
-    if (twinCount) twinCount.textContent = this.twin && this.twinCount > 1 ? ` (${this.twinCount - (this.twinQueue || []).length} of ${this.twinCount})` : '';
-    document.getElementById('score-text').textContent    = `${getFirstName(this.studentName)} · ${this.score}`;
+    const half = !!this.twin && !!HALF_BACK[this.currentForm];
+    const twinText = document.getElementById('twin-text');
+    if (twinText && this.twin) {
+      const k = this.twinCount > 1 ? ` (${this.twinCount - (this.twinQueue || []).length} of ${this.twinCount})` : '';   // the Warm-Up's two
+      twinText.textContent = half ? `Try one like it${k}. Get it right. You win back half a point!` : `Try one like it${k}. This one does not change your score.`;
+    }
+    const twinSpeak = document.querySelector('#twin-note .twin-speak');
+    if (twinSpeak) { twinSpeak.classList.toggle('hidden', !half); twinSpeak.textContent = '🔊'; }
+    document.getElementById('score-text').textContent    = `${getFirstName(this.studentName)} · ${showScore(this.score)}`;
     document.getElementById('progress-fill').style.width = `${(this.currentIndex / total) * 100}%`;
 
     this._renderStreak();
@@ -1901,11 +1913,15 @@ const app = {
 
     this.saveProgress();
     this.startReadTimer();
-    if (sayHint) {
+    // the Warm-Up's extra question: its strip (half a point back) is read first, then the hint
+    const stripFirst = !!this.twin && !!HALF_BACK[this.currentForm] && !reviewMode;
+    if (sayHint || stripFirst) {
       const shownQ = q;
       setTimeout(() => {
-        const hb = document.querySelector('#question-text .hint-speak-btn');
-        if (hb && this.currentQ() === shownQ && !this.questionLocked && !activeSpeakBtn) speakHint(hb);
+        const here = () => this.currentQ() === shownQ && !this.questionLocked && !activeSpeakBtn;
+        const hint = () => { const hb = document.querySelector('#question-text .hint-speak-btn'); if (sayHint && hb && here()) speakHint(hb); };
+        const sb = stripFirst && document.querySelector('#twin-note .twin-speak');
+        if (sb && here()) speakDir(sb, hint); else hint();
       }, 400);
     }
   },
@@ -1918,7 +1934,7 @@ const app = {
     const ch = window.MM4Video ? MM4Video.forWatch(q) : null;
     if (!ch || this._videoFailed) { this._renderWatchText(q, total); return; }
     document.getElementById('twin-note').classList.add('hidden');
-    document.getElementById('score-text').textContent = `${getFirstName(this.studentName)} · ${this.score}`;
+    document.getElementById('score-text').textContent = `${getFirstName(this.studentName)} · ${showScore(this.score)}`;
     document.getElementById('progress-fill').style.width = `${(this.currentIndex / total) * 100}%`;
     this._renderStreak();
     document.getElementById('question-text').innerHTML = `<span class="watch-tag">🎬 Watch the video</span> ${formatMathText(q.title)}`;
@@ -1971,7 +1987,7 @@ const app = {
      the student must hear it to the end (the same Listen as after a miss), then Next shows. Not scored. */
   _renderWatchText(q, total) {
     document.getElementById('twin-note').classList.add('hidden');
-    document.getElementById('score-text').textContent = `${getFirstName(this.studentName)} · ${this.score}`;
+    document.getElementById('score-text').textContent = `${getFirstName(this.studentName)} · ${showScore(this.score)}`;
     document.getElementById('progress-fill').style.width = `${(this.currentIndex / total) * 100}%`;
     this._renderStreak();
     document.getElementById('question-text').innerHTML = `<span class="watch-tag">👀 Watch and listen</span> ${formatMathText(q.title)}`;
@@ -2125,7 +2141,9 @@ const app = {
     } else if (isTwin) {
       // "Try one like it" never changes the score. The result rides in the event
       // log (the dashboard reads it) and on the miss it follows (the end screen shows it).
-      logEvent('twin', Object.assign({ id: q.id, of: q.twinOf, ok: correct }, correct ? {} : { pick: this.selectedAnswer }));
+      const pts = correct && HALF_BACK[this.currentForm] ? 0.5 : 0;   // the Warm-Up: half a point back (11/23)
+      if (pts) this.score += pts;
+      logEvent('twin', Object.assign({ id: q.id, of: q.twinOf, ok: correct }, pts ? { pts } : {}, correct ? {} : { pick: this.selectedAnswer }));
       const m = this.missedQuestions[this.missedQuestions.length - 1];
       if (m && m.id === q.twinOf) { m.twins = [...(m.twins || []), correct ? 'right' : 'wrong']; m.twin = m.twins.includes('wrong') ? 'wrong' : 'right'; }
     } else if (correct) {
@@ -2160,7 +2178,7 @@ const app = {
     fb.innerHTML = !teach
       ? (correct ? `✅ <strong>Correct!</strong>` : `❌ <strong>Not quite.</strong>`)
       : correct
-        ? `✅ <strong>Correct!</strong>${isTwin ? ' You fixed it!' : ''}<br>${formatMathText(q.explanation)}`
+        ? `✅ <strong>Correct!</strong>${isTwin ? ' You fixed it!' + (HALF_BACK[this.currentForm] ? ' You won back half a point!' : '') : ''}<br>${formatMathText(q.explanation)}`
         // After a miss the screen stays short (Marcos 10/10 — too much on a page gets lost): the mistake,
         // the right answer, then the worked picture. The general explanation is only the fallback for a
         // wrong choice with no mistake note; a right answer still gets it.
@@ -2214,7 +2232,7 @@ const app = {
     if (teach && !correct) { const b = videoBtnHTML('miss', '🎬 Watch how'); if (b) fb.insertAdjacentHTML('beforeend', `<div class="video-offer"${this.mustHear ? ' hidden' : ''}>${b}</div>`); }
 
     document.getElementById('confirm-btn').classList.add('hidden');
-    document.getElementById('score-text').textContent = `${getFirstName(this.studentName)} · ${this.score}`;
+    document.getElementById('score-text').textContent = `${getFirstName(this.studentName)} · ${showScore(this.score)}`;
     this._renderStreak();
     this.saveProgress();
     this.startNextTimer();
@@ -2293,7 +2311,7 @@ const app = {
     document.getElementById('final-msg').textContent = msg;
 
     const pctEl = document.getElementById('final-percent');
-    pctEl.innerHTML = `${this.score}/${total}<br><small style="font-size:0.5em;color:${pct>=70?'var(--correct)':'var(--danger)'};">${pct}% · ${letter}</small>`;
+    pctEl.innerHTML = `${showScore(this.score)}/${total}<br><small style="font-size:0.5em;color:${pct>=70?'var(--correct)':'var(--danger)'};">${pct}% · ${letter}</small>`;
     setTimeout(() => pctEl.classList.add('revealed'), 50);
 
     const missedSec = document.getElementById('missed-section');
@@ -2308,7 +2326,9 @@ const app = {
             <div style="margin:3px 0;">${formatMathText(m.q)}</div>
             <div>Your answer: <span style="color:var(--danger);">${formatMathText(m.yourAnswer)}</span>${showFix ? ` &nbsp; ✅ Correct: <strong style="color:var(--correct);">${formatMathText(m.correct)}</strong>` : ''}</div>
             ${showFix && m.explanation ? `<div style="margin-top:5px;font-size:0.85rem;color:#555;font-style:italic;">💡 ${formatMathText(m.explanation)}</div>` : ''}
-            ${m.twin ? `<div class="mi-twin ${m.twin}">🔁 Try one like it: ${m.twin === 'right' ? ((m.twins || []).length > 1 ? `✅ you got the next ${m.twins.length} right` : '✅ you got the next one right') : '❌ missed again — ask for help with this one'}</div>` : ''}
+            ${m.twin ? `<div class="mi-twin ${m.twin}">🔁 Try one like it: ${HALF_BACK[app.currentForm] && m.twins
+              ? `${m.twins.map(t => t === 'right' ? '✅' : '❌').join(' ')} ${(w => w === 2 ? 'you won back the point' : w === 1 ? 'you won back half a point' : 'ask for help with this one')(m.twins.filter(t => t === 'right').length)}`
+              : m.twin === 'right' ? ((m.twins || []).length > 1 ? `✅ you got the next ${m.twins.length} right` : '✅ you got the next one right') : '❌ missed again — ask for help with this one'}</div>` : ''}
           </div>`
         ).join('');
     } else {
