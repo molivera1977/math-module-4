@@ -645,6 +645,14 @@ function passed(name, form) {
   const best = bestScore(name, form);
   return !!best && best.score / best.total * 100 >= PASS_PCT;
 }
+/* WELCOME BACK NEVER SENDS A STUDENT BACK A STEP (Marcos 11/24, "Yes, fix it"): Nazareth passed the Warm-Up, the
+   Practice and the Review on 11/20; a Practice she opened at home for 14 s on 11/21 took over "Welcome back" on 11/24,
+   hid her menu, and took her back into the Practice. A try left unfinished on a part this student already PASSED is
+   not offered: the menu shows, so the next part is a tap away (the old save stays until a new try replaces it).
+   A try on the part still to pass is offered as before; a test is always offered. */
+function passedAlready(name, form) {
+  return ['W', 'P', 'B'].includes(form) && passed(name, form);
+}
 /* How many right it takes: 70% of 16 questions = 12 (Warm-Up: 70% of 9 = 7) */
 function needFor(form) {
   const step = HALF_BACK[form] ? 0.5 : 1;   // the Warm-Up counts half points: 70% of 9 = 6½
@@ -1164,7 +1172,8 @@ const app = {
     loadSheetProgress(name).then(added => {
       if (token !== sheetProgressToken) return;           // another student signed in meanwhile
       section.classList.remove('loading-work');
-      if (added && loggedInName === name) applyFormLocks(name);
+      // the passes from other Chromebooks can land after "Welcome back" showed: look again (passedAlready)
+      if (added && loggedInName === name) { applyFormLocks(name); this.checkResume(); }
     });
   },
 
@@ -1562,7 +1571,7 @@ const app = {
     const formSelect = document.getElementById('form-select-section');
     if (saved && rc) {
       const data = JSON.parse(saved);
-      if (this.studentName && data.studentName === this.studentName) {
+      if (this.studentName && data.studentName === this.studentName && !passedAlready(this.studentName, data.currentForm)) {
         rc.classList.remove('hidden');
         markSchoolResume();   // a test outside the school day: Resume shut
         document.getElementById('resume-detail').textContent =
