@@ -2167,7 +2167,10 @@ const app = {
     // 📍 Right Now on the dashboard (Marcos 11/20: "Yes, add both" — Module 4 and Base Ten, like Module 5): every scored
     // answer rides in the log, right or missed, so the teacher sees a ✓ / ✗ box per question while the student works.
     // One try per question; steps and "try one like it" log their own kinds above.
-    if (!isStep && !isTwin) logEvent('answer', { id: q.id, ok: correct });
+    // 11/26 (Marcos, "Yes, all of them" — like Module 5 on 11/24): each answer carries its question and its right answer, so
+    // the dashboard's 📍 Right Now shows the right answer beside a ✗ and the problem on a tapped ✓, in this student's own
+    // numbers. Logged after the student's one try, so it never helps on that question.
+    if (!isStep && !isTwin) logEvent('answer', { id: q.id, ok: correct, say: q.q, a: String(q.answer) });
 
     // Practice A, Practice B and the Review teach: the right answer + why, every time.
     // The Test and its retake: mark only the student's own pick — the right
